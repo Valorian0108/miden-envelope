@@ -11,7 +11,19 @@ import { defineConfig } from "vite";
 export default defineConfig(({ mode }) => ({
   server: { port: 5173, host: "127.0.0.1" },
   optimizeDeps: { exclude: ["@miden-sdk/miden-sdk"] },
-  build: { target: "esnext" },
+  build: {
+    target: "esnext",
+    // Public surface only: the demo at /, the film at /shell.html, the
+    // preview at /preview.html. The root index.html is a dev harness and
+    // the stage*.html pages are measurement rigs — none of them ship.
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL("./demo/index.html", import.meta.url)),
+        shell: fileURLToPath(new URL("./shell.html", import.meta.url)),
+        preview: fileURLToPath(new URL("./preview.html", import.meta.url)),
+      },
+    },
+  },
   resolve:
     mode === "mock"
       ? {

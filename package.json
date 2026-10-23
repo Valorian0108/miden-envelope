@@ -9,6 +9,7 @@
     "dev": "vite",
     "dev:mock": "vite --mode mock",
     "build": "vite build",
+    "build:mock": "vite build --mode mock",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
