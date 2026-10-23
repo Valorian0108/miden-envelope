@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type ramp · RD-04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: oklch(97% 0.006 250);
+    --raised: oklch(99% 0.004 250);
+    --ink: oklch(19% 0.012 255);
+    --dim: oklch(42% 0.01 255);
+    --faint: oklch(58% 0.008 255);
+    --rule: oklch(80% 0.008 250);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --brass: oklch(72% 0.08 235);
+    --oxblood: oklch(45% 0.13 25);
+    --inset: clamp(1.25rem, 5.8vw, 6.5rem);
+    --track-label: 0.11em;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    /* RD-04 proposal — six sizes, stack A */
+    --size-display: clamp(2.5rem, 6vw, 4.5rem);
+    --size-deck: clamp(1.25rem, 2.6vw, 1.75rem);
+    --size-body: 1.0625rem;
+    --size-small: 0.875rem;
+    --size-micro: 0.8125rem;
+    --size-numeral: 1.5rem;
+    --lead-display: 1;
+    --lead-body: 1.65;
+    --lead-micro: 1.5;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0; background:var(--paper); color:var(--ink);
+       font-family:"IBM Plex Sans", system-ui, sans-serif;
+       font-size:var(--size-body); line-height:var(--lead-body);
+       padding:clamp(2.5rem,6vw,5rem) var(--inset) 6rem}
+  .wrap{max-width:78rem; margin:0 auto}
+
+  .kicker{font-family:var(--mono); font-size:.8125rem; letter-spacing:var(--track-label);
+          text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+          margin:0 0 1.4rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+
+  h1{font-family:"Space Grotesk", sans-serif; font-weight:500; letter-spacing:-0.035em;
+     font-size:var(--size-display); line-height:var(--lead-display); margin:0 0 1.25rem; max-width:24ch}
+  .deck{font-family:"Space Grotesk", sans-serif; font-weight:400; letter-spacing:-0.02em;
+        font-size:var(--size-deck); color:var(--dim); margin:0 0 3rem; max-width:56ch}
+
+  table{width:100%; border-collapse:collapse}
+  thead th{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+           text-transform:uppercase; color:var(--faint); text-align:left;
+           padding:.75rem .75rem .75rem 0; border-bottom:1px solid var(--ink); white-space:nowrap}
+  tbody td{padding:.9rem .75rem .9rem 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  tbody tr:last-child td{border-bottom:1px solid var(--ink)}
+
+  .id{font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; white-space:nowrap; width:1%}
+  .name{font-weight:500; min-width:12rem}
+  .size{font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; color:var(--dim); white-space:nowrap}
+
+  .row{font-size:.9375rem; line-height:1.5}
+  .row .sample{font-family:"IBM Plex Mono", monospace; font-size:.6875rem; letter-spacing:var(--track-label);
+                text-transform:uppercase; color:var(--pumpkin); display:block; margin-bottom:.2rem}
+  .row .text{display:block; color:var(--ink)}
+  .row .text.mono{font-family:var(--mono)}
+  .row .note{font-size:.8125rem; color:var(--dim); margin-top:.2rem}
+
+  .spec{border-top:1px solid var(--ink); border-bottom:1px solid var(--rule);
+        padding:2rem 0 1rem; margin-top:3rem}
+  .spec h2{font-family:"Space Grotesk", sans-serif; font-weight:500; letter-spacing:-0.035em;
+           font-size:clamp(1.75rem,4vw,2.5rem); line-height:1.1; margin:0 0 1rem}
+  .spec p{max-width:56ch; color:var(--dim); margin:0 0 1.5rem; line-height:1.6}
+  .note{border-top:1px solid var(--ink); padding-top:1.2rem; margin-top:1rem; max-width:66ch;
+        font-size:.9375rem; color:var(--dim)}
+  .note b{color:var(--ink)}
+  a{color:inherit; text-decoration:underline; text-decoration-color:var(--brass);
+    text-decoration-thickness:1px; text-underline-offset:.18em}
+  a:hover{text-decoration-color:var(--pumpkin)}
+  footer{margin-top:3.5rem; border-top:1px solid var(--rule); padding-top:1.1rem;
+         font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; color:var(--faint);
+         line-height:1.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">RD-04 &middot; type ramp</p>
+  <h1>Six sizes against stack A</h1>
+  <p class="deck">Space Grotesk for the loud lines, IBM Plex Sans for reading, IBM Plex Mono for the
+  micro labels. Sizes are fluid where the screen changes width, fixed where they shouldn't.</p>
+
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Role</th><th class="name">Set in</th><th class="size">Size</th><th>What it touches</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="id">RD-04-a</td>
+        <td class="name">Display</td>
+        <td class="size"><code>var(--size-display)</code></td>
+        <td><code>clamp(2.5rem, 6vw, 4.5rem)</code></td>
+        <td class="row">
+          <span class="sample">Observer one</span>
+          <span class="text" style="font-family:'Space Grotesk',sans-serif; font-weight:500; letter-spacing:-0.035em;">Three watchers</span>
+          <span class="note">Poster scale — the loudest line on the page. Shrinks on small screens so it never wraps awkwardly.</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="id">RD-04-b</td>
+        <td class="name">Deck</td>
+        <td class="size"><code>var(--size-deck)</code></td>
+        <td><code>clamp(1.25rem, 2.6vw, 1.75rem)</code></td>
+        <td class="row">
+          <span class="sample">Beat title</span>
+          <span class="text" style="font-family:'Space Grotesk',sans-serif; font-weight:400; letter-spacing:-0.02em;">The label on the outside is the only part anyone can read.</span>
+          <span class="note">Subhead size — between the title and body, used sparingly.</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="id">RD-04-c</td>
+        <td class="name">Body</td>
+        <td class="size"><code>var(--size-body)</code></td>
+        <td><code>1.0625rem</code></td>
+        <td class="row">
+          <span class="sample">—</span>
+          <span class="text">The label on the outside is the only part anyone can read. What is inside stays inside, and the page says so without asking for trust.</span>
+          <span class="note">Continuous reading. Sets the measure (about 68 characters) and the leading (1.65).</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="id">RD-04-d</td>
+        <td class="name">Small</td>
+        <td class="size"><code>var(--size-small)</code></td>
+        <td><code>0.875rem</code></td>
+        <td class="row">
+          <span class="sample">Role caption</span>
+          <span class="text">Observer one &middot; attribution 35.9%</span>
+          <span class="note">Secondary information beside a body line — smaller, quieter, same voice.</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="id">RD-04-e</td>
+        <td class="name">Micro</td>
+        <td class="size"><code>var(--size-micro)</code></td>
+        <td><code>0.8125rem</code>, <code>var(--track-label)</code></td>
+        <td class="row">
+          <span class="sample" style="font-family:'Space Grotesk',sans-serif;">OBSERVER ONE</span>
+          <span class="text mono">0x8E18</span>
+          <span class="note">Uppercase, tracked out 0.11em, monospace — the small labels that name regions without spending a heading on them.</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="id">RD-04-f</td>
+        <td class="name">Numeral</td>
+        <td class="size"><code>var(--size-numeral)</code></td>
+        <td><code>1.5rem</code>, tabular</td>
+        <td class="row">
+          <span class="sample">Attribution</span>
+          <span class="text">35.9%</span>
+          <span class="note">Numbers that stand beside words — same weight as the chip they sit in, no jumping between widths.</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="spec">
+    <h2>How to read this page</h2>
+    <p>Resize the window: <b>display</b> and <b>deck</b> scale with the viewport so the poster line keeps
+    its proportion at every width. <b>Body</b>, <b>small</b>, <b>micro</b> and <b>numeral</b> stay fixed —
+    small text that scales with the window stays unreadable on small screens and shouty on large ones.</p>
+    <p>Stack A holds the tracking at every size: <code>-0.035em</code> tightens display as it grows,
+    <code>+0.11em</code> opens micro so the small caps stay distinguishable. That pair of extremes comes
+    straight from UI-001's measurements on the Voice Lab sheet.</p>
+  </div>
+
+  <p class="note"><b>If this ramp fits,</b> say so and RD-04 is set — I'll write the six tokens into the
+  stylesheet and the demo can start measuring against real sizes. <b>If a size feels off,</b> name it
+  (RD-04-c, say) and what's wrong, and I'll adjust just that one.</p>
+
+  <footer>
+    RD-04 &middot; type ramp &middot; stack A: Space Grotesk / IBM Plex Sans / IBM Plex Mono &middot; built 2026-10-23<br>
+    Palette, inset and tracking from the Voice Lab token sheet (UI-001).
+  </footer>
+
+</div>
+</body>
+</html>

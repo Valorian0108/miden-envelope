@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three typefaces · RD-03</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Inter+Tight:wght@400;500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: oklch(97% 0.006 250);
+    --raised: oklch(99% 0.004 250);
+    --ink: oklch(19% 0.012 255);
+    --dim: oklch(42% 0.01 255);
+    --faint: oklch(58% 0.008 255);
+    --rule: oklch(80% 0.008 250);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --brass: oklch(72% 0.08 235);
+    --oxblood: oklch(45% 0.13 25);
+    --inset: clamp(1.25rem, 5.8vw, 6.5rem);
+    --track-label: 0.11em;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0; background:var(--paper); color:var(--ink);
+       font-family:"IBM Plex Sans", system-ui, sans-serif;
+       font-size:1.0625rem; line-height:1.65;
+       padding:clamp(2.5rem,6vw,5rem) var(--inset) 6rem}
+  .wrap{max-width:78rem; margin:0 auto}
+
+  .kicker{font-family:var(--mono); font-size:.8125rem; letter-spacing:var(--track-label);
+          text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+          margin:0 0 1.4rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+
+  h1{font-family:"Space Grotesk", sans-serif; font-weight:500; letter-spacing:-0.035em;
+     font-size:clamp(2.5rem,6.5vw,4.5rem); line-height:.98; margin:0 0 1.25rem; max-width:18ch}
+  .deck{max-width:62ch; font-size:clamp(1.0625rem,1.5vw,1.25rem); color:var(--dim); margin:0 0 2.5rem}
+
+  .words{border-top:1px solid var(--ink); border-bottom:1px solid var(--rule);
+         display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:0 0 3.5rem}
+  .words > div{padding:1.1rem 1.5rem 1.3rem 0; border-right:1px solid var(--rule)}
+  .words > div:last-child{border-right:0; padding-right:0}
+  .words > div > b:first-child{font-family:var(--mono); font-size:.75rem; letter-spacing:var(--track-label);
+           text-transform:uppercase; display:block; margin-bottom:.45rem; font-weight:500}
+  .words p b{font-weight:600}
+  .words p{margin:0; font-size:.9375rem; line-height:1.55; color:var(--dim)}
+
+  .opt{border-top:2px solid var(--ink); padding:1.4rem 0 2.6rem; display:grid;
+       grid-template-columns:15rem minmax(0,1fr); gap:clamp(1.5rem,4vw,3.5rem)}
+  .opt + .opt{margin-top:0}
+  .tag{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+       text-transform:uppercase; color:var(--faint); margin:0 0 .5rem}
+  .letter{font-family:var(--mono); font-size:3.25rem; font-weight:500; line-height:1;
+          letter-spacing:-0.02em; color:var(--ink); margin:0 0 .9rem}
+  .names{margin:0 0 .9rem; font-size:.9375rem; line-height:1.5}
+  .names span{display:block; padding:.2rem 0; border-bottom:1px solid var(--rule)}
+  .names span:last-child{border-bottom:0}
+  .names em{font-style:normal; font-family:var(--mono); font-size:.6875rem; letter-spacing:.06em;
+            text-transform:uppercase; color:var(--faint); display:inline-block; width:4.6rem}
+  .feel{margin:0; font-size:.9375rem; line-height:1.6; color:var(--dim)}
+
+  .sample{padding-top:.2rem}
+  .micro{font-size:.8125rem; letter-spacing:var(--track-label); text-transform:uppercase;
+         color:var(--dim); display:flex; align-items:center; gap:.6em; margin:0 0 .9rem}
+  .micro::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+  .display{font-weight:500; letter-spacing:-0.035em; line-height:1;
+           font-size:clamp(2rem,4.4vw,3.4rem); margin:0 0 .9rem}
+  .body{margin:0 0 1.1rem; max-width:54ch; font-size:1.0625rem; line-height:1.65}
+  .nums{display:flex; gap:2.2rem; align-items:baseline; border-top:1px solid var(--rule);
+        padding-top:.8rem}
+  .nums div{font-size:1.5rem; line-height:1.1}
+  .nums small{font-family:var(--mono); font-size:.625rem; letter-spacing:var(--track-label);
+              text-transform:uppercase; color:var(--faint); display:block; margin-top:.3rem}
+
+  /* --- per-option face assignment; nothing else changes between them --- */
+  .a .display, .a .nums div{font-family:"Space Grotesk", sans-serif}
+  .a .body{font-family:"IBM Plex Sans", sans-serif}
+  .a .micro, .a .nums small, .a .tag{font-family:"IBM Plex Mono", monospace}
+
+  .b .display, .b .nums div{font-family:"Inter Tight", sans-serif}
+  .b .body{font-family:"Inter", sans-serif}
+  .b .micro, .b .nums small, .b .tag{font-family:"JetBrains Mono", monospace}
+
+  .c .display{font-family:"Instrument Sans", sans-serif}
+  .c .body{font-family:"Instrument Sans", sans-serif}
+  .c .nums div{font-family:"Instrument Sans", sans-serif}
+  .c .micro, .c .nums small, .c .tag{font-family:"Space Mono", monospace}
+
+  .note{border-top:1px solid var(--ink); padding-top:1.2rem; margin-top:1rem; max-width:66ch;
+        font-size:.9375rem; color:var(--dim)}
+  .note b{color:var(--ink); font-weight:600}
+  .note + .note{margin-top:1.4rem}
+  code{font-family:var(--mono); font-size:.875em}
+  a{color:inherit; text-decoration:underline; text-decoration-color:var(--brass);
+    text-decoration-thickness:1px; text-underline-offset:.18em}
+  a:hover{text-decoration-color:var(--pumpkin)}
+  footer{margin-top:3.5rem; border-top:1px solid var(--rule); padding-top:1.1rem;
+         font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; color:var(--faint);
+         line-height:1.75}
+
+  @media (max-width:58rem){
+    .words{grid-template-columns:1fr}
+    .words > div{border-right:0; border-bottom:1px solid var(--rule); padding-right:0}
+    .words > div:last-child{border-bottom:0}
+    .opt{grid-template-columns:1fr; gap:1.4rem}
+    .names em{width:4.2rem}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">RD-03 &middot; typefaces</p>
+  <h1>Three typefaces, picked by looking</h1>
+  <p class="deck">The same words are set three times below. Same sizes, same spacing, same colour.
+  The only thing that changes is the shape of the letters. Look at them, then say <b>A</b>,
+  <b>B</b> or <b>C</b>.</p>
+
+  <div class="words">
+    <div>
+      <b>Typeface</b>
+      <p>The design of the letters themselves: the shapes of the a and the g, how thick the strokes
+      are, whether the ends are cut square. One typeface exists in many weights and many sizes.</p>
+    </div>
+    <div>
+      <b>Font</b>
+      <p>One file of that design, at one weight. <code>Space Grotesk</code> is a typeface;
+      <code>Space Grotesk Bold</code> is a font. People say "font" for both, which is why the word
+      <b>typeface</b> is being used here.</p>
+    </div>
+    <div>
+      <b>Role</b>
+      <p>The job the letters are doing. This page has three: <b>display</b> for the loud line,
+      <b>reading</b> for paragraphs, <b>micro</b> for the small labels. Different jobs want
+      different shapes, so a set is usually three typefaces rather than one.</p>
+    </div>
+  </div>
+
+  <!-- ============ A ============ -->
+  <section class="opt a">
+    <div class="meta">
+      <p class="tag">option</p>
+      <p class="letter">A</p>
+      <p class="names">
+        <span><em>display</em>Space Grotesk</span>
+        <span><em>reading</em>IBM Plex Sans</span>
+        <span><em>micro</em>IBM Plex Mono</span>
+      </p>
+      <p class="feel">Your reference sheet. Slightly technical rather than neutral, which suits a
+      page about a technical subject. Every measurement in UI-001 was taken on these three, so
+      nothing has to be re-checked.</p>
+    </div>
+    <div class="sample">
+      <p class="micro">Observer one</p>
+      <p class="display">Three watchers</p>
+      <p class="body">The label on the outside is the only part anyone can read. What is inside
+      stays inside, and the page says so without asking for trust.</p>
+      <div class="nums">
+        <div>35.9%<small>attribution</small></div>
+        <div>0x8E18<small>tag</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="opt b">
+    <div class="meta">
+      <p class="tag">option</p>
+      <p class="letter">B</p>
+      <p class="names">
+        <span><em>display</em>Inter Tight</span>
+        <span><em>reading</em>Inter</span>
+        <span><em>micro</em>JetBrains Mono</span>
+      </p>
+      <p class="feel">Cooler and more institutional — closer to a standards document than a
+      magazine. Nothing about it is memorable, which is either the most professional answer or the
+      most forgettable one.</p>
+    </div>
+    <div class="sample">
+      <p class="micro">Observer one</p>
+      <p class="display">Three watchers</p>
+      <p class="body">The label on the outside is the only part anyone can read. What is inside
+      stays inside, and the page says so without asking for trust.</p>
+      <div class="nums">
+        <div>35.9%<small>attribution</small></div>
+        <div>0x8E18<small>tag</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="opt c">
+    <div class="meta">
+      <p class="tag">option</p>
+      <p class="letter">C</p>
+      <p class="names">
+        <span><em>display</em>Instrument Sans</span>
+        <span><em>reading</em>Instrument Sans</span>
+        <span><em>micro</em>Space Mono</span>
+      </p>
+      <p class="feel">Warmer and a little editorial. Space Mono is deliberately odd — slashed zero,
+      wide letters, a typewriter feel. Most character of the three, and the one most likely to be
+      noticed at label size.</p>
+    </div>
+    <div class="sample">
+      <p class="micro">Observer one</p>
+      <p class="display">Three watchers</p>
+      <p class="body">The label on the outside is the only part anyone can read. What is inside
+      stays inside, and the page says so without asking for trust.</p>
+      <div class="nums">
+        <div>35.9%<small>attribution</small></div>
+        <div>0x8E18<small>tag</small></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note"><b>What to look at.</b> The display line first — does "Three watchers" look like
+  the title of something you would read, or like a logo? Then the paragraph: read two lines and see
+  whether your eye slides. Then the small caps label and the two numbers, because <code>0x8E18</code>
+  has a zero and an E in it and every one of these sets draws them differently.</p>
+
+  <p class="note"><b>What this does not settle.</b> The sizes are shown smaller than the real page.
+  Once a set is picked, the next step (RD-04) fixes the six sizes, the line heights and the tracking
+  against it — and the display type will get a lot larger, so a face that looks calm here can look
+  loud at poster size. If you want, I can show the winner at full size before we commit.</p>
+
+  <p class="note"><b>If you do not care,</b> say <b>A</b> and we move on — it costs nothing, because
+  the measurements already fit it. If you dislike all three, say which is closest and what is wrong
+  with it, and I will set another three.</p>
+
+  <footer>
+    RD-03 &middot; typeface chooser &middot; built 2026-10-22<br>
+    Same words, same sizes, same colours. Only the letterforms differ.<br>
+    Palette and spacing from the Voice Lab token sheet (UI-001).
+  </footer>
+
+</div>
+</body>
+</html>

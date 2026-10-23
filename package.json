@@ -1,0 +1,27 @@
+{
+  "name": "miden-envelope",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "description": "Client-side metadata minimisation for Miden private notes",
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "capture": "node capture/record.mjs",
+    "stills": "node capture/stills.mjs"
+  },
+  "dependencies": {
+    "@miden-sdk/miden-sdk": "^0.17.6"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

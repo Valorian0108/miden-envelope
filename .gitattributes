@@ -1,0 +1,5 @@
+# keep line endings consistent across machines; binaries stay binaries
+* text=auto eol=lf
+*.webm binary
+*.png binary
+*.wasm binary

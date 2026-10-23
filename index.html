@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>miden-envelope · harness</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        background: #0b0e14;
+        color: #d6deeb;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 14px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: #7fd1c1;
+        margin: 0 0 4px;
+      }
+      #sub { color: #6b7a99; margin-bottom: 20px; font-size: 12px; }
+      #out { white-space: pre-wrap; word-break: break-word; }
+      .hdr { color: #7fd1c1; margin-top: 20px; font-weight: 700; }
+      .ok { color: #9ae6b4; }
+      .warn { color: #f6c177; }
+      .err { color: #ff8f8f; }
+      .dim { color: #6b7a99; }
+    </style>
+  </head>
+  <body>
+    <h1>miden-envelope · mock-chain harness</h1>
+    <div id="sub">envelope ground truth, measured not assumed</div>
+    <div id="out">loading WASM…</div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

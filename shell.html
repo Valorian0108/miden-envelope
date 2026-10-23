@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorting counter — one pass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* RD-01 — every value is a token. No hex anywhere else. */
+  :root{
+    --paper:   oklch(97% 0.006 250);
+    --raised:  oklch(99% 0.004 250);
+    --ink:     oklch(19% 0.012 255);
+    --rule:    oklch(80% 0.008 250);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --brass:   oklch(72% 0.08 235);
+    --oxblood: oklch(45% 0.13 25);
+    --dim:     oklch(42% 0.01 255);
+    --faint:   oklch(58% 0.008 255);
+
+    --inset: clamp(1.25rem, 5.8vw, 6.5rem);
+    --container: 78rem;
+    --measure: 68ch;
+
+    --size-display: clamp(2.5rem, 6vw, 4.5rem);
+    --size-deck: clamp(1.25rem, 2.6vw, 1.75rem);
+    --size-body: 1.0625rem;
+    --size-small: 0.875rem;
+    --size-micro: 0.8125rem;
+    --size-numeral: 1.5rem;
+    --track-label: 0.11em;
+    --track-display: -0.035em;
+    --lead-body: 1.65;
+
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+    --display: "Space Grotesk", sans-serif;
+
+    --hover-lift: 3px;
+    --hover-ease: cubic-bezier(0.16,1,0.3,1);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0; background:var(--paper); color:var(--ink);
+       font-family:var(--sans); font-size:var(--size-body); line-height:var(--lead-body);
+       padding:clamp(2.5rem,6vw,5rem) var(--inset) 4rem}
+  .wrap{max-width:var(--container); margin:0 auto}
+
+  .kicker{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+          text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+          margin:0 0 1rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+
+  h1{font-family:var(--display); font-weight:500; letter-spacing:var(--track-display);
+     font-size:var(--size-display); line-height:.98; margin:0 0 .5rem;
+     color:var(--pumpkin); max-width:22ch}
+  .deck{font-family:var(--display); font-weight:400; letter-spacing:-0.02em;
+        font-size:var(--size-deck); color:var(--dim); margin:0 0 3rem; max-width:var(--measure)}
+
+  /* RD-07 single screen, three equal columns */
+  .frames{display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; margin:0 0 3rem}
+  .frame{background:var(--raised); min-height:30rem; padding:1.4rem 1.5rem 1.6rem;
+         transition:transform .2s var(--hover-ease)}
+  .frame:hover{transform:translateY(calc(-1 * var(--hover-lift)))}
+  .frame.one{border:2px solid var(--pumpkin)}
+  .frame.two{border:2px solid var(--brass)}
+  .frame.three{border:2px solid var(--oxblood)}
+
+  /* RD-12 panel frame: top rule, name, measure, nothing else */
+  .frame .slot{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+               text-transform:uppercase; color:var(--faint); display:flex; align-items:center; gap:.55em;
+               padding-bottom:.6rem; border-bottom:1px solid var(--rule); margin-bottom:1rem}
+  .frame .slot::before{content:""; width:.5em; height:.5em; flex:0 0 auto}
+  .frame.one .slot::before{background:var(--pumpkin)}
+  .frame.two .slot::before{background:var(--brass)}
+  .frame.three .slot::before{background:var(--oxblood)}
+
+  .frame .name{font-family:var(--display); font-weight:500; letter-spacing:-0.02em;
+               font-size:1.5rem; line-height:1.1; margin:0 0 1rem}
+  .frame.one .name{color:var(--pumpkin)}
+  .frame.two .name{color:var(--brass)}
+  .frame.three .name{color:var(--oxblood)}
+
+  /* RD-13 face: one-colour line, heavy stroke, cropped close + off-centre, shared geometry */
+  .face{height:13rem; overflow:hidden; margin:0 0 1.1rem; background:var(--raised);
+        display:flex; justify-content:center}
+  .face svg{width:100%; max-width:19rem; height:100%; display:block}
+  .face .line{fill:none; stroke-width:6; stroke-linecap:round; stroke-linejoin:round}
+  /* wink: swap the open eye for a closed lid, one eye at a time */
+  .face .closed{display:none}
+  .face.wink-l .open.l{display:none}
+  .face.wink-l .closed.l{display:inline}
+  .face.wink-r .open.r{display:none}
+  .face.wink-r .closed.r{display:inline}
+  .frame.one .face .line{stroke:var(--pumpkin)}
+  .frame.two .face .line{stroke:var(--brass)}
+  .frame.three .face .line{stroke:var(--oxblood)}
+
+  .role{font-size:1rem; line-height:1.6; color:var(--dim); margin:0 0 .9rem}
+  .speech{font-size:1rem; line-height:1.6; color:var(--ink); margin:0 0 1.1rem;
+          border-left:2px solid var(--rule); padding-left:.8rem}
+  .frame.one .speech{border-left-color:var(--pumpkin)}
+  .frame.two .speech{border-left-color:var(--brass)}
+  .frame.three .speech{border-left-color:var(--oxblood)}
+
+  /* RD-17 chip as a sentence fragment */
+  .chip{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+        text-transform:uppercase; display:flex; align-items:center; gap:.55em; margin:0}
+  .chip::before{content:""; width:.5em; height:.5em; border-radius:50%; flex:0 0 auto}
+  .frame.one .chip{color:var(--pumpkin)} .frame.one .chip::before{background:var(--pumpkin)}
+  .frame.two .chip{color:var(--brass)} .frame.two .chip::before{background:var(--brass)}
+  .frame.three .chip{color:var(--oxblood)} .frame.three .chip::before{background:var(--oxblood)}
+
+  /* RD-18/19/20 — the parcels, grouped by the code written on the outside */
+  .lane-head{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+             text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+             margin:0 0 1rem}
+  .lane-head::before{content:""; width:.5em; height:.5em; background:var(--ink); flex:0 0 auto}
+  .code-groups{display:flex; flex-direction:column; margin:0 0 3rem}
+  .code-group{border-top:1px solid var(--ink); padding:1.25rem 0}
+  .code-group:last-child{border-bottom:1px solid var(--rule)}
+  .group-head{font-family:var(--sans); font-size:1rem; line-height:1.5; color:var(--ink);
+              margin:0 0 .9rem -.55em; display:inline-flex; align-items:center; gap:.6em;
+              padding:.22em .55em; transition:background .25s, color .25s}
+  .group-head::before{content:""; width:.5em; height:.5em; background:var(--ink); flex:0 0 auto}
+  .group-head.scan-p{background:var(--pumpkin); color:var(--ink)}
+  .group-head.scan-b{background:var(--brass); color:var(--ink)}
+  .group-head.scan-o{background:var(--oxblood); color:var(--paper)}
+  .group-head.scan-p::before,
+  .group-head.scan-b::before,
+  .group-head.scan-o::before{background:currentColor}
+  .lane{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem}
+  .pay{border:1px solid var(--rule); background:var(--raised);
+       display:flex; flex-direction:column}
+  .pay .tag{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+            padding:.5rem .6rem; border-bottom:1px solid var(--rule); color:var(--ink);
+            display:flex; align-items:center; gap:.5em;
+            transition:background .25s, color .25s}
+  .pay .tag::before{content:""; width:.5em; height:.5em; background:var(--rule); flex:0 0 auto}
+  .pay.scan-p .tag{background:var(--pumpkin); color:var(--ink)}
+  .pay.scan-b .tag{background:var(--brass); color:var(--ink)}
+  .pay.scan-o .tag{background:var(--oxblood); color:var(--paper)}
+  .pay.scan-p .tag::before,
+  .pay.scan-b .tag::before,
+  .pay.scan-o .tag::before{background:currentColor}
+  /* RD-19 — outside carries the code; inside is unreadable */
+  .pay .inside{padding:.6rem; font-family:var(--mono); font-size:.6875rem; line-height:1.45;
+               color:var(--faint); height:4.4rem; overflow:hidden; word-break:break-all;
+               opacity:.5; user-select:none}
+
+  /* ---- the film: one pass, three looks ---- */
+  .stage-foot{display:flex; align-items:baseline; justify-content:space-between; gap:1.5rem;
+              min-height:2.2rem; margin:0 0 .5rem}
+  .caption{font-family:var(--sans); font-size:1rem; line-height:1.5; color:var(--dim); margin:0}
+  .replay{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+          text-transform:uppercase; background:none; border:1px solid var(--ink); color:var(--ink);
+          padding:.55em .95em; cursor:pointer; flex:0 0 auto;
+          transition:background .2s, color .2s}
+  .replay:hover,.replay:focus-visible{background:var(--ink); color:var(--paper)}
+  /* RD-35 — focus is visible on every control, not only on replay. */
+  .stop:focus-visible,.dial-input:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+
+  .frame{transition:opacity .65s var(--hover-ease)}
+  body.playing .frame{opacity:.2}
+  body.playing .frame.lit{opacity:1}
+  .frame.lit{outline:1px solid; outline-offset:3px}
+  .frame.one.lit{outline-color:var(--pumpkin)}
+  .frame.two.lit{outline-color:var(--brass)}
+  .frame.three.lit{outline-color:var(--oxblood)}
+
+  .pay{outline:1px solid transparent; outline-offset:2px;
+       transition:opacity .9s ease, transform 1s var(--hover-ease), outline-color .3s}
+  body.playing .pay{opacity:0; transform:translateY(14px)}
+  body.playing .pay.in{opacity:1; transform:none}
+  .pay.scan-p{outline-color:var(--pumpkin)}
+  .pay.scan-b{outline-color:var(--brass)}
+  .pay.scan-o{outline-color:var(--oxblood)}
+
+  .group-head{transition:color .3s}
+
+  /* the account line under each list, only shown at person three's beat */
+  .acct{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+        color:var(--dim); margin:-.55rem 0 .35rem -.2rem; opacity:0; transition:opacity .5s}
+  .acct-list{list-style:none; display:flex; flex-wrap:wrap; gap:.3rem .95rem;
+             margin:0 0 1rem; padding:0; font-family:var(--mono); font-size:.78rem;
+             color:var(--dim); opacity:0; transition:opacity .5s}
+  .acct-list li::before{content:""; display:inline-block; width:.4em; height:.4em;
+                        background:var(--dim); margin-right:.5em; vertical-align:.05em}
+  .code-groups.accounts .acct,
+  .code-groups.accounts .acct-list{opacity:1}
+
+  /* the live status line: only the person currently watching shows it */
+  .watch{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+         margin:1rem 0 0; opacity:0; transition:opacity .3s}
+  .frame.one .watch{color:var(--pumpkin)}
+  .frame.two .watch{color:var(--brass)}
+  .frame.three .watch{color:var(--oxblood)}
+  .frame.watching .watch{opacity:1}
+
+  /* eyes shut until that person's look begins */
+  .face.shut .open{display:none}
+  .face.shut .closed{display:inline}
+  .face.reading .open{animation:scan-eye 1.15s ease-in-out infinite}
+  @keyframes scan-eye{0%,100%{transform:translateX(-2.5px)}50%{transform:translateX(2.5px)}}
+
+  /* person three never changes - except the one smile that confirms */
+  .frame.three .mouth-smile{display:none}
+  .frame.three.smile .mouth-flat{display:none}
+  .frame.three.smile .mouth-smile{display:inline}
+
+  /* ---- Phase 4: the shortlist ---- */
+  .shortlist{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem;
+             transition:opacity .7s ease}
+  .shortlist.hidden{opacity:0; visibility:hidden;
+                    transition:opacity .7s ease, visibility 0s linear .7s}
+  .lists{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3rem; margin-top:1.4rem}
+  .list-title{font-family:var(--display); font-weight:500; letter-spacing:-0.02em;
+              font-size:1.5rem; line-height:1.15; margin:0 0 1.1rem}
+  .cands{list-style:none; margin:0 0 1rem; padding:0; border-top:1px solid var(--rule)}
+  .cand{display:flex; align-items:baseline; justify-content:space-between; gap:1rem;
+        padding:.65rem 0; border-bottom:1px solid var(--rule);
+        font-family:var(--mono); font-size:var(--size-micro)}
+  .cand .who{letter-spacing:.02em}
+  .cand .verdict{color:var(--faint); letter-spacing:var(--track-label); text-transform:uppercase;
+                 font-size:.6875rem; text-align:right}
+  .cand.you .who{font-weight:500}
+  .cand.you .who::before{content:"\\25B8"; margin-right:.5em}
+  .cand.you .verdict{color:var(--ink)}
+  .list-note{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.6}
+
+  /* ---- Phase 5: the block ---- */
+  .block{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem;
+         transition:opacity .7s ease}
+  .block.hidden{opacity:0; pointer-events:none; visibility:hidden;
+                transition:opacity .7s ease, visibility 0s linear .7s}
+  .block-head{display:flex; align-items:baseline; justify-content:space-between; gap:1.5rem;
+              flex-wrap:wrap; margin:1.3rem 0 1.4rem}
+  .stops{display:flex; gap:.5rem; flex-wrap:wrap}
+  .stop{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+        background:none; border:1px solid var(--rule); color:var(--dim);
+        padding:.5em .8em; cursor:pointer; transition:border-color .2s, color .2s}
+  .stop:hover{border-color:var(--ink); color:var(--ink)}
+  .stop[aria-pressed="true"]{border-color:var(--ink); color:var(--ink)}
+  .block-read{font-family:var(--mono); font-size:var(--size-micro); color:var(--ink);
+              margin:0; letter-spacing:.02em}
+  .block-read b{font-weight:500}
+  .grid{position:relative; display:grid; grid-template-columns:repeat(16,1fr);
+        gap:.42rem; max-width:32rem}
+  .dot{aspect-ratio:1; background:var(--rule); opacity:.5; position:relative;
+       transition:opacity .3s, background .3s}
+  .dot.in{background:var(--ink); opacity:.22}
+  .dot.on{background:var(--ink); opacity:1}
+  .dot.mine::before{content:""; position:absolute; inset:32%; background:var(--paper)}
+  .run{position:absolute; border:2px solid var(--oxblood); pointer-events:none;
+       transition:left .45s var(--hover-ease), top .45s var(--hover-ease),
+                  width .45s var(--hover-ease), height .45s var(--hover-ease)}
+
+  /* ---- Phase 6: the dial ---- */
+  .dial{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem;
+        max-width:34rem; transition:opacity .7s ease}
+  .dial.hidden{opacity:0; pointer-events:none; visibility:hidden;
+               transition:opacity .7s ease, visibility 0s linear .7s}
+  .dial-label{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+              text-transform:uppercase; color:var(--dim); display:block; margin:1.2rem 0 .7rem}
+  .dial-input{width:100%; accent-color:var(--oxblood); cursor:pointer}
+  .dial-scale{display:flex; justify-content:space-between; margin:.35rem 0 1.2rem;
+              font-family:var(--mono); font-size:.6875rem; color:var(--faint); letter-spacing:.04em}
+  .dial-read{font-family:var(--sans); font-size:1.0625rem; color:var(--ink); margin:0 0 .4rem}
+  .dial-read b{font-family:var(--display); font-weight:500; font-size:1.5rem;
+               font-variant-numeric:tabular-nums; letter-spacing:-.02em; margin-right:.15em}
+  .dial-cost{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.6}
+
+  /* ---- Phase 7: the numbers ---- */
+  .readings{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem;
+            transition:opacity .7s ease}
+  .readings.hidden{opacity:0; pointer-events:none; visibility:hidden;
+                   transition:opacity .7s ease, visibility 0s linear .7s}
+  .reads{display:grid; grid-template-columns:repeat(4,1fr); margin:1.4rem 0 1.2rem;
+         border-top:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+  .read{padding:1.15rem 1.25rem 1.25rem; border-right:1px solid var(--rule)}
+  .read:first-child{padding-left:0}
+  .read:last-child{border-right:0; padding-right:0}
+  .r-label{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+           text-transform:uppercase; color:var(--dim); margin:0 0 .6rem}
+  .r-value{font-family:var(--display); font-size:2.1rem; line-height:1; color:var(--ink);
+           margin:0 0 .55rem; font-variant-numeric:tabular-nums; letter-spacing:-.03em}
+  .r-value .u{font-size:1rem; color:var(--dim); margin-left:.06em}
+  .r-note{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.55}
+  .legend{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.65}
+  @media (max-width:860px){
+    .reads{grid-template-columns:repeat(2,1fr)}
+    .read:nth-child(2){border-right:0; padding-right:0}
+    .read:nth-child(1),.read:nth-child(2){border-bottom:1px solid var(--rule)}
+    .read:nth-child(3){padding-left:0}
+  }
+
+  /* ---- Phase 8: the six cards. RD-31 — one template, six variations.
+     Nothing inside a card is positioned per-card, so they cannot drift. ---- */
+  .argument{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem}
+  .card{border-top:1px solid var(--rule); padding:3rem 0 0; margin:0 0 3.5rem; min-height:56vh}
+  .card:first-of-type{border-top:0; padding-top:1.6rem}
+  .beat-eyebrow{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+                text-transform:uppercase; color:var(--faint); display:flex; align-items:center;
+                gap:.55em; margin:0 0 1.1rem}
+  .beat-eyebrow::before{content:""; width:.5em; height:.5em; background:var(--faint); flex:0 0 auto}
+  .beat-head{font-family:var(--display); font-weight:500; letter-spacing:var(--track-display);
+             font-size:clamp(1.65rem,3.6vw,2.5rem); line-height:1.04; color:var(--ink);
+             margin:0 0 1.5rem; max-width:24ch}
+  .beat-body{max-width:var(--measure); margin:0}
+  .beat-body p{margin:0 0 1.1rem}
+  .beat-body p:last-child{margin-bottom:0}
+  .beat-body b{font-weight:500; color:var(--ink)}
+  .beat-body .gloss{color:var(--dim)}
+  .beat-body code{font-family:var(--mono); font-size:.92em}
+  .beat-foot{max-width:var(--measure); margin:2rem 0 0; padding-top:1rem;
+             border-top:1px solid var(--rule); font-family:var(--mono);
+             font-size:var(--size-small); letter-spacing:.02em; color:var(--ink)}
+  @media (max-width:52rem){ .card{min-height:0; padding-top:2.2rem; margin-bottom:2.6rem} }
+
+  /* ---- Phase 8: footnotes. RD-33 — what is real, what is not, the spread ---- */
+  .footnotes{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem}
+  .fn{max-width:var(--measure); font-size:var(--size-small); color:var(--dim);
+      line-height:1.75; margin:0 0 1.15rem}
+  .fn b{color:var(--ink); font-weight:500}
+  .fn code{font-family:var(--mono); font-size:.95em}
+  .measured-wrap{overflow-x:auto; margin:1.8rem 0 .9rem; max-width:100%}
+  .measured{border-collapse:collapse; width:100%; max-width:42rem;
+            font-family:var(--mono); font-size:var(--size-micro)}
+  .measured caption{caption-side:top; text-align:left; font-family:var(--sans);
+                    font-size:var(--size-small); color:var(--dim); line-height:1.65;
+                    padding:0 0 1rem; max-width:var(--measure)}
+  .measured th{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+               text-transform:uppercase; color:var(--dim); font-weight:400; text-align:right;
+               padding:.5rem .9rem .55rem 0; border-bottom:1px solid var(--rule); vertical-align:bottom}
+  .measured td,.measured tbody th{text-align:right; padding:.45rem .9rem .45rem 0;
+               font-variant-numeric:tabular-nums; font-weight:400;
+               border-bottom:1px solid color-mix(in srgb, var(--rule) 45%, transparent)}
+  .measured th:first-child,.measured td:first-child{text-align:left; padding-left:0}
+  .measured td.gap{color:var(--faint)}
+  .measured tr.legacy th,.measured tr.legacy td{color:var(--ink)}
+  .measured-legend{font-size:var(--size-small); color:var(--dim); line-height:1.65;
+                   margin:0; max-width:var(--measure)}
+
+  footer{border-top:1px solid var(--rule); padding-top:1.25rem;
+         font-family:var(--mono); font-size:var(--size-small); letter-spacing:.02em;
+         color:var(--faint); line-height:1.8; max-width:var(--measure)}
+  footer b{color:var(--ink)}
+
+  @media (max-width:52rem){ .frames{grid-template-columns:1fr} .lane{grid-template-columns:1fr}
+                            .lists{grid-template-columns:1fr; gap:2rem}
+                            .measured{font-size:.6875rem}
+                            .measured th,.measured td,.measured tbody th{padding-right:.35rem} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">The sorting counter &middot; one pass</p>
+  <h1>Sorting counter</h1>
+  <p class="deck">One surface. Six parcels, three people, one look each. Every beat shows exactly how
+  much the person looking can tell.</p>
+
+  <div class="frames">
+
+    <div class="frame one">
+      <span class="slot">Person one &middot; the three lists</span>
+      <h2 class="name">Watcher</h2>
+      <div class="face">
+        <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <circle class="line" cx="102" cy="98" r="88"/>
+          <path class="line" d="M62 62 Q78 52 94 60"/>
+          <path class="line" d="M110 60 Q126 52 142 62"/>
+          <path class="line open l" d="M64 84 Q78 69 92 84 Q78 99 64 84"/>
+          <path class="line closed l" d="M64 84 Q78 91 92 84"/>
+          <path class="line open r" d="M112 84 Q126 69 140 84 Q126 99 112 84"/>
+          <path class="line closed r" d="M112 84 Q126 91 140 84"/>
+          <path class="line" d="M78 132 Q102 146 126 132"/>
+        </svg>
+      </div>
+      <p class="role">Sees the three list summaries: 3, 2 and 1. Never the codes themselves.</p>
+      <p class="speech">"Three lists, six parcels in total. That is all I can tell you."</p>
+      <p class="chip">three lists, six parcels</p>
+      <p class="watch">Person one is watching the counter.</p>
+    </div>
+
+    <div class="frame two">
+      <span class="slot">Person two &middot; lists and codes</span>
+      <h2 class="name">Clerk</h2>
+      <div class="face">
+        <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <circle class="line" cx="102" cy="98" r="88"/>
+          <path class="line" d="M62 66 Q78 62 94 66"/>
+          <path class="line" d="M110 66 Q126 62 142 66"/>
+          <path class="line open l" d="M64 86 Q78 71 92 86 Q78 101 64 86"/>
+          <path class="line closed l" d="M64 86 Q78 93 92 86"/>
+          <path class="line open r" d="M112 86 Q126 71 140 86 Q126 101 112 86"/>
+          <path class="line closed r" d="M112 86 Q126 93 140 86"/>
+          <path class="line" d="M80 134 Q102 136 124 134"/>
+        </svg>
+      </div>
+      <p class="role">Sees the same three lists, and the code printed on every parcel.</p>
+      <p class="speech">"The same six parcels — and now I can see which code each one wears."</p>
+      <p class="chip">adds the six codes</p>
+      <p class="watch">Person two is watching the counter.</p>
+    </div>
+
+    <div class="frame three">
+      <span class="slot">Person three &middot; codes to accounts</span>
+      <h2 class="name">Bystander</h2>
+      <div class="face">
+        <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <circle class="line" cx="102" cy="98" r="88"/>
+          <path class="line" d="M62 64 Q78 58 94 63"/>
+          <path class="line" d="M110 63 Q126 58 142 64"/>
+          <path class="line open l" d="M64 85 Q78 70 92 85 Q78 100 64 85"/>
+          <path class="line closed l" d="M64 85 Q78 92 92 85"/>
+          <path class="line open r" d="M112 85 Q126 70 140 85 Q126 100 112 85"/>
+          <path class="line closed r" d="M112 85 Q126 92 140 85"/>
+          <path class="line mouth-flat" d="M82 133 Q102 139 122 133"/>
+          <path class="line mouth-smile" d="M74 127 Q102 151 130 127"/>
+        </svg>
+      </div>
+      <p class="role">Has the account list. Turns each code into the accounts that produce it.</p>
+      <p class="speech">"Four accounts produce this code. Even with everything, still four."</p>
+      <p class="chip">turns a code into accounts</p>
+      <p class="watch">Person three is watching the counter.</p>
+    </div>
+
+  </div>
+
+  <div class="stage-foot">
+    <p class="caption" aria-live="polite"></p>
+    <button class="replay" type="button" hidden>Play again</button>
+  </div>
+
+  <p class="lane-head">Sorting counter &middot; parcels</p>
+
+  <div class="code-groups">
+
+    <section class="code-group">
+      <p class="group-head">There are 3 parcels in code 0x8E18.</p>
+      <p class="acct">4 accounts produce this code.</p>
+      <ul class="acct-list">
+        <li>0x8e1bed3a&hellip;</li>
+        <li>0x3d98cf80&hellip;</li>
+        <li>0xdd7e7b58&hellip;</li>
+        <li>0xa8953756&hellip;</li>
+      </ul>
+      <div class="lane">
+        <div class="pay"><span class="tag">Code &middot; 0x8E18</span><span class="inside">7c41f2b908dd3ae2cc19 4b7e05a1f6d8 90c3 2e77b4 51af 8d06 c9e2 3f58 74b1 a0d9 6e2c f813 0b47 d59a 2c6e b704 93f8 1e5d 8a26 40cb</span></div>
+        <div class="pay"><span class="tag">Code &middot; 0x8E18</span><span class="inside">a3d0 96e5 12f7 68b4 c029 5e81 74aa 0f36 d9c2 8b57 2e10 f643 9a78 4c05 b3e9 61d4 08af c72b 5f96 e413 308d 95c1 7b2e a640 1d5f 82b7</span></div>
+        <div class="pay"><span class="tag">Code &middot; 0x8E18</span><span class="inside">e812 57c9 0a4f b630 9d78 2f15 c4a6 70e3 3b91 d258 6c04 f9b7 148e a520 86d9 4e67 03f2 b8c5 91a0 5d36 27eb c094 7f41 3688 e25b 6a0d</span></div>
+      </div>
+    </section>
+
+    <section class="code-group">
+      <p class="group-head">There are 2 parcels in code 0x8E19.</p>
+      <p class="acct">2 accounts produce this code.</p>
+      <ul class="acct-list">
+        <li>0x4c02e7f1&hellip;</li>
+        <li>0x91ba6d5c&hellip;</li>
+      </ul>
+      <div class="lane">
+        <div class="pay"><span class="tag">Code &middot; 0x8E19</span><span class="inside">4f7a c213 90e6 5b8d 0d34 a6f1 7c52 e908 31b7 d460 85c9 2a7e f315 6084 b9d2 1e47 c7a0 92f6 5803 0b69 d1c4 8e25 47ba a031 6f98 25e0</span></div>
+        <div class="pay"><span class="tag">Code &middot; 0x8E19</span><span class="inside">b057 3e91 8c26 f4a3 17d8 6205 c9b4 75e0 0a3f d6c1 9842 5f17 e2a8 4b63 20d9 87f5 c310 6e4b a986 3502 f7d1 1c58 b4e7 9063 58ac 02f4</span></div>
+      </div>
+    </section>
+
+    <section class="code-group">
+      <p class="group-head">There is 1 parcel in code 0x8E1A.</p>
+      <p class="acct">1 account produces this code.</p>
+      <ul class="acct-list">
+        <li>0x2f70c4de&hellip;</li>
+      </ul>
+      <div class="lane">
+        <div class="pay"><span class="tag">Code &middot; 0x8E1A</span><span class="inside">6d29 f8b0 41c7 0e53 b3a8 9614 2f70 d0c5 84e1 5a96 1307 ec62 7b38 a5f9 3c84 0915 f2d6 c640 8e0b 47a2 b957 20c3 d7e8 61f4 9850 34ab</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="shortlist">
+    <p class="lane-head">Shortlist &middot; who could have sent it</p>
+    <div class="lists">
+
+      <div class="list">
+        <h2 class="list-title">Four accounts fit 0x8E18.</h2>
+        <ul class="cands">
+          <li class="cand you"><span class="who">0x8e1bed3a&hellip;</span><span class="verdict">yours</span></li>
+          <li class="cand"><span class="who">0x3d98cf80&hellip;</span><span class="verdict">could be</span></li>
+          <li class="cand"><span class="who">0xdd7e7b58&hellip;</span><span class="verdict">could be</span></li>
+          <li class="cand"><span class="who">0xa8953756&hellip;</span><span class="verdict">could be</span></li>
+        </ul>
+        <p class="list-note">Three parcels, four accounts. The list cannot say which of the four received them.</p>
+      </div>
+
+      <div class="list">
+        <h2 class="list-title">One account fits 0x8E1A.</h2>
+        <ul class="cands">
+          <li class="cand"><span class="who">0x2f70c4de&hellip;</span><span class="verdict">the only one</span></li>
+        </ul>
+        <p class="list-note">One parcel, one account. Nothing to hide behind.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="lane-head">The block &middot; accounts sorted by the code they produce</p>
+    <div class="block-head">
+      <div class="stops" role="group" aria-label="Choose a code">
+        <button class="stop" type="button" data-code="0x8E18" aria-pressed="true">0x8E18 &middot; 4</button>
+        <button class="stop" type="button" data-code="0x8E19" aria-pressed="false">0x8E19 &middot; 2</button>
+        <button class="stop" type="button" data-code="0x8E1A" aria-pressed="false">0x8E1A &middot; 1</button>
+      </div>
+      <p class="block-read"><b>4</b> accounts produce 0x8E18.</p>
+    </div>
+    <div class="grid" id="blockGrid"></div>
+  </section>
+
+  <section class="dial">
+    <p class="lane-head">The dial &middot; how much of the account the code keeps</p>
+    <label class="dial-label" for="kDial">Bits kept from the account</label>
+    <input class="dial-input" id="kDial" type="range" min="0" max="8" step="1" value="1">
+    <div class="dial-scale"><span>legacy &middot; no blinding</span><span>14 bits</span></div>
+    <p class="dial-read"><b>128</b> accounts share a code at 7 bits.</p>
+    <p class="dial-cost">You are one of 128. A recipient scans 128 times as wide to find the note.</p>
+  </section>
+
+  <section class="readings">
+    <p class="lane-head">The numbers &middot; what an observer gets at this width</p>
+    <div class="reads">
+      <div class="read">
+        <p class="r-label">Named outright</p>
+        <p class="r-value"><b>35.9</b><span class="u">%</span></p>
+        <p class="r-note">36.9% is what any crowd of 128 gives.</p>
+      </div>
+      <div class="read">
+        <p class="r-label">Payments linked</p>
+        <p class="r-value"><b>0.0</b><span class="u">%</span></p>
+        <p class="r-note">3.8% is what any crowd of 128 gives.</p>
+      </div>
+      <div class="read">
+        <p class="r-label">In your block</p>
+        <p class="r-value"><b>3</b></p>
+        <p class="r-note">2.0 is what any crowd of 128 gives.</p>
+      </div>
+      <div class="read">
+        <p class="r-label">Targeted</p>
+        <p class="r-value"><b>36</b><span class="u">/36</span></p>
+        <p class="r-note">Same at every width. Nothing here moves it.</p>
+      </div>
+    </div>
+    <p class="legend">Big figures are what Stage 6 measured on 128 real account ids. The small line
+    under each is the arithmetic any crowd of 128 would give. Labels and position carry the meaning;
+    colour never does.</p>
+  </section>
+
+  <section class="argument">
+    <p class="lane-head">The argument &middot; six cards, in order</p>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat one</p>
+      <h2 class="beat-head">The envelope is public.</h2>
+      <div class="beat-body">
+        <p>A Miden <b>private note</b> <span class="gloss">&rarr; an encrypted payment record that only
+        the accounts it names can open &rarr;</span> sits on a chain anyone can read. The inside is
+        sealed. The address on the outside is not.</p>
+        <p>Every note carries a <b>tag</b> <span class="gloss">&rarr; a small public number, 14 bits
+        wide, printed on the outside of the note &rarr;</span> and the node files notes by tag: hand
+        over every note labelled <code>0x8e18</code>. A watcher cannot open your note. They can see
+        its label, how many notes wore that label, and when each one arrived.</p>
+        <p>Everything on this page follows from that one asymmetry: sealed inside, public outside.</p>
+      </div>
+      <p class="beat-foot">The privacy was never in the seal. It is in the label.</p>
+    </article>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat two</p>
+      <h2 class="beat-head">Every payment to you looks the same.</h2>
+      <div class="beat-body">
+        <p>The obvious tag to use is the one the recipient implies: the <b>default tag</b>
+        <span class="gloss">&rarr; the tag computed from the top 14 bits of an account number
+        &rarr;</span>. Use it and every payment to that account wears an identical label. Six
+        payments, one pile.</p>
+        <p>A watcher cannot name the pile&rsquo;s owner from the label alone, and does not need to.
+        Six notes sharing one label are one history: same recipient, six times over, on a timetable
+        anyone can read.</p>
+        <p><b>Blinding</b> <span class="gloss">&rarr; drawing the tag at random from a set the
+        recipient has agreed to answer to, instead of using the one the account implies &rarr;</span>
+        breaks that. The six payments now wear six labels out of a <b>pool</b>
+        <span class="gloss">&rarr; every tag one account listens for &rarr;</span> of 128, and the pile
+        splits into six, each indistinguishable from other traffic in the same pool.</p>
+      </div>
+      <p class="beat-foot">Unblinded, its pile is one pile.</p>
+    </article>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat three</p>
+      <h2 class="beat-head">The dial.</h2>
+      <div class="beat-body">
+        <p>How much to blind is one number. <b>k</b> <span class="gloss">&rarr; how many of the 14 tag
+        bits the code still keeps from the account number &rarr;</span> sets the pool at
+        2<sup>14&minus;k</sup>. At k&nbsp;=&nbsp;14 everything is kept: the pool is one tag and
+        blinding is switched off. At k&nbsp;=&nbsp;7 seven bits are kept: the pool is 128 tags, and
+        your note is one of 128 equally likely labels.</p>
+        <p>Every bit you give up doubles the crowd, and doubles what the recipient has to scan to find
+        your note. In the library&rsquo;s own run, the blinded receiver listened for 128 labels and
+        recovered all twelve notes in four requests. The receiver listening for one label missed six
+        of them.</p>
+        <p>There is no correct k. There is a crowd you are willing to stand in, and a scan you are
+        willing to ask of whoever pays you.</p>
+      </div>
+      <p class="beat-foot">Drag the dial.</p>
+    </article>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat four</p>
+      <h2 class="beat-head">But the Librarian has a directory.</h2>
+      <div class="beat-body">
+        <p>The third figure at the counter holds something the first does not: the public list of
+        account numbers. <b>Attribution</b> <span class="gloss">&rarr; the fraction of a crowd a
+        watcher can name outright, from the label alone &rarr;</span> is what that list buys.</p>
+        <p>At k&nbsp;=&nbsp;7 the measured figure over 128 real account numbers was 35.9%. The
+        arithmetic any crowd of 128 gives is 36.9% &mdash; close enough that the measurement is not
+        doing work the formula was not already doing. At k&nbsp;=&nbsp;14 it is 100%.</p>
+        <p>So blinding does not make an account unnameable. It makes naming you a question of how many
+        bits you kept, and prints the answer in the pool size.</p>
+      </div>
+      <p class="beat-foot">A shortlist is not a suspicion. It is arithmetic.</p>
+    </article>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat five</p>
+      <h2 class="beat-head">A label names a group, not a person.</h2>
+      <div class="beat-body">
+        <p>Here is the ceiling. Blinding hides the label, not the <b>block</b>
+        <span class="gloss">&rarr; the accounts whose numbers produce the same tag: everyone a watcher
+        has to consider together &rarr;</span>.</p>
+        <p>At k&nbsp;=&nbsp;7 the block holding this film&rsquo;s account measured three accounts;
+        a crowd of 128 gives 2.0 on average. You are hidden inside a group of three. That is not
+        anonymity. It is company.</p>
+        <p>Narrow the pool and the company thins. By k&nbsp;=&nbsp;10 the block is one account, and
+        the label points at a single number again &mdash; with no scan anybody had to widen.</p>
+      </div>
+      <p class="beat-foot">One of a few. Never one of none.</p>
+    </article>
+
+    <article class="card">
+      <p class="beat-eyebrow">beat six</p>
+      <h2 class="beat-head">The third face never moved.</h2>
+      <div class="beat-body">
+        <p>One watcher here is untouched by any of it. The <b>targeted observer</b>
+        <span class="gloss">&rarr; a party who already holds your account number and watches for
+        exactly what it implies &rarr;</span> read 36 of 36 at every width, legacy included. Nothing
+        on this page moves that number, and no setting of the dial will.</p>
+        <p>Blinding is <b>metadata minimisation</b> <span class="gloss">&rarr; shrinking what the
+        outside of the envelope says, not what the inside holds &rarr;</span> against strangers
+        reading a public chain. It is not a defence against a party who was told your number.</p>
+        <p>The film stops here instead of on a win, because the number is true.</p>
+      </div>
+      <p class="beat-foot">Nothing here stops someone who already knows you.</p>
+    </article>
+  </section>
+
+  <section class="footnotes">
+    <p class="lane-head">Footnotes &middot; what is real, what is not, and how much this varies</p>
+
+    <p class="fn"><b>Real.</b> The account number in this film,
+    <code>0x8e1bed3ae2cca241746ef1ca4bf1ec</code>, is a real testnet account id. Its default tag, the
+    pool arithmetic and the closed forms behind every small line are the library&rsquo;s own code
+    (<code>src/envelope</code>). The structural facts the design leans on &mdash; a 120-bit id whose
+    bit 60 carries the storage mode, top bits uniform to within coin-flip noise, and independent
+    rather than merely uniform &mdash; were measured across 519 real account ids and are logged as
+    <code>MIDEN-013</code> and <code>MIDEN-015</code>. Every large figure in the readings was measured
+    in Stage 6 over 128 real account ids.</p>
+
+    <p class="fn"><b>Stand-in.</b> The other 127 accounts in the crowd are generated, not real. They
+    still behave like real ones because the only property the arithmetic uses is that the top 14 bits
+    are uniform and independent, which is exactly what <code>MIDEN-015</code> tested on real
+    directories. The faces are placeholder line drawings; commissioned art replaces them once the
+    direction is agreed. This page sends and receives nothing &mdash; no chain, no mock, no network.
+    The library running against a simulated chain, with its receipts on screen, is
+    <code>demo/index.html</code>.</p>
+
+    <p class="fn"><b>The spread.</b> A crowd of 128 is a sample. Across generated crowds at
+    k&nbsp;=&nbsp;7 attribution averaged 36.5% with a standard deviation of 4.8 points, so any single
+    directory &mdash; the measured one included &mdash; can sit several points off the closed form.
+    Read the small model line as the centre, not as the answer. At k&nbsp;=&nbsp;14 there is almost
+    nothing left to vary: mean 99.5%.</p>
+
+    <div class="measured-wrap">
+    <table class="measured">
+      <caption>What Stage 6 measured, at every width the dial offers. Columns: the width
+      <i>k</i>, the pool it gives, payments linked, accounts named outright, accounts in your block,
+      and the targeted control. The readings panel above keeps the model line beside each figure;
+      this table keeps only what was actually run.</caption>
+      <thead>
+        <tr>
+          <th scope="col">width</th><th scope="col">pool</th><th scope="col">linked</th>
+          <th scope="col">named</th><th scope="col">block</th><th scope="col">targeted</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="legacy"><th scope="row">legacy</th><td>1</td><td>100.0%</td><td>100.0%</td><td>1</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 7</th><td>128</td><td>0.0%</td><td>35.9%</td><td>3</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 8</th><td>64</td><td>0.0%</td><td>66.4%</td><td>3</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 9</th><td>32</td><td class="gap">&mdash;</td><td>82.8%</td><td>2</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 10</th><td>16</td><td>33.3%</td><td>90.6%</td><td>1</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 11</th><td>8</td><td class="gap">&mdash;</td><td>95.3%</td><td>1</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 12</th><td>4</td><td>83.3%</td><td>98.4%</td><td>1</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 13</th><td>2</td><td class="gap">&mdash;</td><td>100.0%</td><td>1</td><td>36/36</td></tr>
+        <tr><th scope="row">k = 14</th><td>1</td><td>100.0%</td><td>100.0%</td><td>1</td><td>36/36</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="measured-legend">&mdash; means the link rate was not run at that width. Nothing was
+    interpolated to fill the gap; the arithmetic value is in the readings panel instead.</p>
+  </section>
+
+  <footer>
+    <b>Honesty note:</b> this page is a client-side sketch. It sends and receives nothing;
+    no chain, no mock, no network. The faces are placeholder line drawings; commissioned art replaces
+    them once the direction is agreed.
+  </footer>
+
+</div>
+<script>
+/* The film. One clock, absolute offsets, state classes only.
+   No reduced-motion branch: motion is the point here. */
+(function(){
+  var frames = [].slice.call(document.querySelectorAll('.frame'));
+  var faces  = frames.map(function(f){ return f.querySelector('.face'); });
+  var cards  = [].slice.call(document.querySelectorAll('.pay'));
+  var heads  = [].slice.call(document.querySelectorAll('.group-head'));
+  var caption = document.querySelector('.caption');
+  var replay  = document.querySelector('.replay');
+  var groups  = document.querySelector('.code-groups');
+  var shortlist = document.querySelector('.shortlist');
+  var block   = document.querySelector('.block');
+  var dialEl  = document.querySelector('.dial');
+  var readings = document.querySelector('.readings');
+  var timers  = [];
+
+  function at(ms, fn){ timers.push(setTimeout(fn, ms)); }
+  function say(text){ caption.textContent = text; }
+
+  function eyes(i, open, reading){
+    faces[i].classList.toggle('shut', !open);
+    faces[i].classList.toggle('reading', !!reading);
+  }
+
+  function reset(){
+    timers.forEach(clearTimeout); timers = [];
+    document.body.classList.add('playing');
+    replay.hidden = true;
+    frames.forEach(function(f){ f.classList.remove('lit','smile','watching'); });
+    groups.classList.remove('accounts');
+    shortlist.classList.add('hidden');
+    block.classList.add('hidden');
+    dialEl.classList.add('hidden');
+    readings.classList.add('hidden');
+    faces.forEach(function(f){ f.classList.add('shut'); f.classList.remove('reading'); });
+    cards.forEach(function(c){ c.classList.remove('in','scan-p','scan-b','scan-o'); });
+    heads.forEach(function(h){ h.classList.remove('scan-p','scan-b','scan-o'); });
+    say('');
+  }
+
+  function play(){
+    reset();
+
+    /* 1. six parcels arrive, slowly */
+    at(300, function(){ say('Six parcels arrive at the counter.'); });
+    cards.forEach(function(c, i){
+      at(600 + i * 550, function(){ c.classList.add('in'); });
+    });
+
+    /* 2. person one: the three list summaries, pumpkin, then the report */
+    at(4300, function(){
+      frames[0].classList.add('lit','watching');
+      eyes(0, true, true);
+      say('');
+    });
+    heads.forEach(function(h, i){
+      at(4700 + i * 1150, function(){
+        h.classList.add('scan-p');
+        at(1300, function(){ h.classList.remove('scan-p'); });
+      });
+    });
+    at(8300, function(){ say('Person one reports: three lists, six parcels in total.'); });
+    at(10600, function(){
+      frames[0].classList.remove('lit','watching');
+      eyes(0, false);
+    });
+
+    /* 3. person two: the same lists plus the code on each parcel, brass */
+    at(11500, function(){
+      frames[1].classList.add('lit','watching');
+      eyes(1, true, true);
+      say('');
+    });
+    heads.forEach(function(h, i){
+      at(11900 + i * 950, function(){
+        h.classList.add('scan-b');
+        at(1150, function(){ h.classList.remove('scan-b'); });
+      });
+    });
+    cards.forEach(function(c, i){
+      at(11900 + i * 550, function(){
+        c.classList.add('scan-b');
+        at(900, function(){ c.classList.remove('scan-b'); });
+      });
+    });
+    at(15800, function(){ say('Person two reports: the same six parcels, and the code each one wears.'); });
+    at(18100, function(){
+      frames[1].classList.remove('lit','watching');
+      eyes(1, false);
+    });
+
+    /* 4. person three: everything, plus the accounts behind each code, oxblood */
+    at(19000, function(){
+      frames[2].classList.add('lit','watching');
+      eyes(2, true, false);
+      groups.classList.add('accounts');
+      say('');
+    });
+    cards.forEach(function(c, i){
+      at(19500 + i * 480, function(){
+        c.classList.add('scan-o');
+        at(800, function(){ c.classList.remove('scan-o'); });
+      });
+    });
+    heads.forEach(function(h, i){
+      at(19500 + i * 800, function(){
+        h.classList.add('scan-o');
+        at(1050, function(){ h.classList.remove('scan-o'); });
+      });
+    });
+    at(22800, function(){
+      say('Person three reports: 0x8E18 gives four accounts. Still four.');
+      shortlist.classList.remove('hidden');
+    });
+    at(25000, function(){ frames[2].classList.add('smile'); });
+    at(25600, function(){ say('Four accounts fit one code. One parcel alone has one account.'); });
+
+    /* 5. rest */
+    at(27000, function(){
+      document.body.classList.remove('playing');
+      frames.forEach(function(f){ f.classList.add('lit'); f.classList.remove('watching'); });
+      faces.forEach(function(f){ f.classList.remove('shut'); f.classList.remove('reading'); });
+      say('The crowd is the cover. Bigger crowd, less to point at.');
+      block.classList.remove('hidden');
+      dialEl.classList.remove('hidden');
+      readings.classList.remove('hidden');
+      replay.hidden = false;
+    });
+  }
+
+  /* idle winks, people one and two only, never during a take */
+  function winkLoop(face){
+    setTimeout(function(){
+      if (!document.body.classList.contains('playing') && !face.classList.contains('shut')){
+        var side = Math.random() < 0.5 ? 'l' : 'r';
+        face.classList.add('wink-' + side);
+        setTimeout(function(){ face.classList.remove('wink-' + side); }, 220);
+      }
+      winkLoop(face);
+    }, 3000 + Math.random() * 7000);
+  }
+
+  replay.addEventListener('click', play);
+
+  play();
+  faces.slice(0, 2).forEach(winkLoop);
+})();
+</script>
+<script>
+/* Phase 5 - the block. 128 accounts, sorted by the code they produce, so
+   accounts that share a code sit next to each other and the run can be bracketed. */
+(function(){
+  var grid  = document.getElementById('blockGrid');
+  if (!grid) return;
+  var read  = document.querySelector('.block-read');
+  var stops = [].slice.call(document.querySelectorAll('.stop'));
+
+  var CODES = { '0x8E18': 4, '0x8E19': 2, '0x8E1A': 1 };
+  var RUNS  = { '0x8E18': [40, 41, 42, 43], '0x8E19': [44, 45], '0x8E1A': [46] };
+  var MINE  = 41;
+
+  var dots = [], i;
+  for (i = 0; i < 128; i++) {
+    var d = document.createElement('span');
+    d.className = 'dot';
+    grid.appendChild(d);
+    dots.push(d);
+  }
+
+  Object.keys(RUNS).forEach(function(code){
+    RUNS[code].forEach(function(n){
+      dots[n].classList.add('in');
+      dots[n].dataset.code = code;
+    });
+  });
+  dots[MINE].classList.add('mine');
+
+  var run = document.createElement('span');
+  run.className = 'run';
+  grid.appendChild(run);
+
+  function select(code){
+    dots.forEach(function(d){
+      d.classList.toggle('on', d.dataset.code === code);
+    });
+    stops.forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.code === code ? 'true' : 'false');
+    });
+    var n = CODES[code];
+    read.innerHTML = '<b>' + n + '</b> ' +
+      (n === 1 ? 'account produces ' : 'accounts produce ') + code + '.';
+
+    var on = dots.filter(function(d){ return d.classList.contains('on'); });
+    var g = grid.getBoundingClientRect();
+    var a = on[0].getBoundingClientRect();
+    var z = on[on.length - 1].getBoundingClientRect();
+    run.style.left   = (a.left - g.left - 4) + 'px';
+    run.style.top    = (a.top - g.top - 4) + 'px';
+    run.style.width  = (z.right - a.left + 8) + 'px';
+    run.style.height = (a.height + 8) + 'px';
+  }
+
+  stops.forEach(function(b){
+    b.addEventListener('click', function(){ select(b.dataset.code); });
+  });
+  select('0x8E18');
+})();
+</script>
+<script>
+/* Phase 6 - the dial, and Phase 7 - the readings it drives.
+   Nine stops: legacy, then k = 7..14. The range input is the whole control, so
+   arrows and Home/End work without a pointer. */
+(function(){
+  var input = document.getElementById('kDial');
+  if (!input) return;
+  var read = document.querySelector('.dial-read');
+  var cost = document.querySelector('.dial-cost');
+  var notes = [].slice.call(document.querySelectorAll('.r-note'));
+  var vals  = [].slice.call(document.querySelectorAll('.r-value'));
+
+  /* Nine stops, in order. Index 0 is legacy — one label for every payment. */
+  var STOPS = [0, 7, 8, 9, 10, 11, 12, 13, 14];
+
+  /* m = measured on 128 real account ids (Stage 6).
+     x = what any crowd of 128 gives (1 - 2^-k)^127, or 1 + 127/2^k for the block. */
+  var D = {
+    0:  { m: ['100.0','100.0','1'],  x: ['100.0','100.0','1.0'] },
+    7:  { m: ['35.9','0.0','3'],     x: ['36.9','3.8','2.0'] },
+    8:  { m: ['66.4','0.0','3'],     x: ['60.8','7.6','1.5'] },
+    9:  { m: ['82.8',null,'2'],      x: ['78.0','14.7','1.2'] },
+    10: { m: ['90.6','33.3','1'],    x: ['88.3','27.6','1.1'] },
+    11: { m: ['95.3',null,'1'],      x: ['94.0','48.7','1.1'] },
+    12: { m: ['98.4','83.3','1'],    x: ['96.9','76.3','1.0'] },
+    13: { m: ['100.0',null,'1'],     x: ['98.5','96.9','1.0'] },
+    14: { m: ['100.0','100.0','1'],  x: ['99.2','100.0','1.0'] }
+  };
+
+  /* Legacy is not a width, so the model line would read oddly against it. */
+  var LEGACY_NOTES = [
+    'No blinding at all. The label is the account, in a crowd of any size.',
+    'No blinding at all. Six payments wear one label, so all six tie together.',
+    'The block is the account itself. There is nobody else standing in it.'
+  ];
+
+  function update(){
+    var k = STOPS[parseInt(input.value, 10)];
+    var d = D[k];
+    var n = k === 0 ? 1 : Math.pow(2, 14 - k);
+
+    if (k === 0){
+      read.innerHTML = '<b>1</b> label for all six payments. Nothing is hidden.';
+      cost.textContent = 'Legacy: every payment to you wears the same label, so six become one history.';
+    } else if (n === 1){
+      read.innerHTML = '<b>1</b> account shares a code at ' + k + ' bits.';
+      cost.textContent = 'No crowd. The code points at one account, and the recipient has nothing extra to scan.';
+    } else {
+      read.innerHTML = '<b>' + n + '</b> accounts share a code at ' + k + ' bits.';
+      cost.textContent = 'You are one of ' + n + '. A recipient scans ' + n +
+                         ' times as wide to find the note.';
+    }
+
+    for (var i = 0; i < 3; i++){
+      var meas  = d.m[i];
+      var shown = (meas === null) ? '&mdash;' : meas;
+      vals[i].innerHTML = '<b>' + shown + '</b>' +
+        (meas !== null && i < 2 ? '<span class="u">%</span>' : '');
+      notes[i].textContent = (k === 0)
+        ? LEGACY_NOTES[i]
+        : (meas === null)
+          ? 'Not measured at this width. The arithmetic says ' + d.x[i] + (i < 2 ? '%' : '') + '.'
+          : d.x[i] + (i < 2 ? '%' : '') + ' is what any crowd of 128 gives.';
+    }
+  }
+
+  input.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>

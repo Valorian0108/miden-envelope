@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>miden-envelope · stage 0 smoke</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        background: #0b0e14;
+        color: #d6deeb;
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 14px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: #7fd1c1;
+        margin: 0 0 4px;
+      }
+      #sub { color: #6b7a99; margin-bottom: 20px; font-size: 12px; }
+      #out { white-space: pre-wrap; word-break: break-word; }
+    </style>
+  </head>
+  <body>
+    <h1>stage 0 · toolchain smoke</h1>
+    <div id="sub">pnpm · vite · WASM · mock client</div>
+    <div id="out">booting…</div>
+    <script type="module" src="/src/stage0.ts"></script>
+  </body>
+</html>

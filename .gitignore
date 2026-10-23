@@ -1,0 +1,10 @@
+# dependencies — reinstallable with `pnpm install`, and platform-specific
+# (the SDK ships a different binary per OS, so a committed copy would be a lie)
+node_modules/
+
+# build output, if anyone ever runs a production build
+dist/
+
+# os and editor droppings
+Thumbs.db
+.DS_Store

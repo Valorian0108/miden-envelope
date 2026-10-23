@@ -1,0 +1,1256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Three Watchers — a preview, not connected to anything</title>
+<style>
+  :root{
+    --bg:#12101c; --panel:#1b1830; --panel2:#221e3a; --line:#322c50;
+    --ink:#f4ead8; --dim:#9a92b8; --faint:#6c6490;
+    --watcher:#f2a65a; --librarian:#6fd3c7; --third:#e8697d; --accent:#ffd166;
+    --round: ui-rounded,"SF Pro Rounded","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  /* clip, not hidden: an ancestor with overflow:hidden becomes a scroll
+     container and silently kills position:sticky on the pinned scene. */
+  html,body{overflow-x:clip}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--round);
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(900px 520px at 18% -6%, rgba(242,166,90,.14), transparent 62%),
+      radial-gradient(760px 480px at 52% 4%, rgba(111,211,199,.11), transparent 60%),
+      radial-gradient(700px 460px at 88% -2%, rgba(232,105,125,.12), transparent 62%);
+  }
+
+  /* ---------- the pinned scene ---------- */
+  #scene{
+    position:sticky; top:0; z-index:1;
+    /* content-driven height: a fixed height lets the panels crush each
+       other on short viewports, and a crushed lane hides the envelopes */
+    min-height:clamp(440px, 62vh, 680px);
+    padding:14px 26px 12px calc(26px + var(--gutter,0px));
+    display:flex; flex-direction:column; gap:10px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(18,16,28,.96),rgba(18,16,28,.80));
+    backdrop-filter:blur(2px);
+  }
+  #topbar{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap}
+  #topbar h1{
+    margin:0; font-size:17px; font-weight:800; letter-spacing:-.01em;
+  }
+  #topbar .tag{
+    font-family:var(--mono); font-size:10.5px; color:var(--faint);
+    border:1px solid var(--line); border-radius:999px; padding:3px 9px;
+    text-transform:uppercase; letter-spacing:.08em;
+  }
+  #beatname{
+    margin-left:auto; font-size:12.5px; color:var(--dim);
+    font-family:var(--mono); letter-spacing:.04em;
+  }
+  #beatname b{color:var(--accent); font-weight:700}
+
+  /* ---------- the three characters ---------- */
+  #cast{display:flex; gap:12px; align-items:stretch; padding-right:var(--cardw,0px)}
+  .who{
+    margin:0; flex:1 1 0; min-width:0;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:10px 12px 11px; display:flex; gap:11px; align-items:center;
+    transition:border-color .45s ease, background .45s ease, box-shadow .45s ease, opacity .45s ease;
+    position:relative; overflow:hidden;
+  }
+  .who.lit{background:var(--panel2)}
+  .who[data-c="watcher"].lit{border-color:rgba(242,166,90,.62); box-shadow:0 0 0 1px rgba(242,166,90,.16), 0 10px 30px -14px rgba(242,166,90,.5)}
+  .who[data-c="librarian"].lit{border-color:rgba(111,211,199,.62); box-shadow:0 0 0 1px rgba(111,211,199,.16), 0 10px 30px -14px rgba(111,211,199,.5)}
+  .who[data-c="third"].lit{border-color:rgba(232,105,125,.62); box-shadow:0 0 0 1px rgba(232,105,125,.16), 0 10px 30px -14px rgba(232,105,125,.5)}
+  .who.asleep{opacity:.42}
+  .who svg{width:62px; height:62px; flex:0 0 62px; display:block}
+  .who .txt{min-width:0}
+  .who .nm{font-size:13px; font-weight:800; letter-spacing:-.01em; line-height:1.2}
+  .who[data-c="watcher"] .nm{color:var(--watcher)}
+  .who[data-c="librarian"] .nm{color:var(--librarian)}
+  .who[data-c="third"] .nm{color:var(--third)}
+  .who .role{font-size:10.5px; color:var(--faint); line-height:1.35; margin-top:2px}
+  .who .says{
+    font-size:11.5px; color:var(--dim); line-height:1.4; margin-top:6px;
+    min-height:2.8em; transition:color .3s;
+  }
+  .who .metric{
+    font-family:var(--mono); font-size:11px; color:var(--ink);
+    background:rgba(255,255,255,.05); border:1px solid var(--line);
+    border-radius:8px; padding:3px 7px; display:inline-block; margin-top:5px;
+    white-space:nowrap;
+  }
+  .who .metric em{font-style:normal; color:var(--faint)}
+  .who.third .metric{color:var(--third)}
+
+  /* ---------- the lane, the piles, the block ---------- */
+  #stage{
+    flex:1 1 auto; min-height:0; display:flex; gap:12px;
+    padding-right:var(--cardw,0px); overflow:hidden;
+  }
+  .panelbox{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:9px 12px 11px; display:flex; flex-direction:column; min-width:0;
+    transition:opacity .45s ease, filter .45s ease;
+  }
+  .panelbox h3{
+    margin:0 0 7px; font-size:10.5px; font-weight:700; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--faint); font-family:var(--mono);
+  }
+  .hidden{opacity:0; filter:blur(3px); pointer-events:none}
+
+  #lanebox{flex:1 1 52%; position:relative; overflow:hidden; min-height:196px}
+  #lane{position:absolute; left:12px; right:12px; top:34px; bottom:96px}
+  .lane-rule{
+    position:absolute; left:0; right:0; top:50%; height:1px;
+    background:repeating-linear-gradient(90deg,var(--line) 0 7px,transparent 7px 14px);
+  }
+  .lane-cap{
+    position:absolute; font-family:var(--mono); font-size:9.5px; color:var(--faint);
+    top:50%; transform:translateY(-140%);
+  }
+  .lane-cap.l{left:0} .lane-cap.r{right:0}
+  .env{
+    position:absolute; top:50%; width:74px; height:46px; margin-top:-23px;
+    transform:translateX(-90px); will-change:transform;
+  }
+  .env .body{
+    position:absolute; inset:0; border-radius:9px; background:#f4ead8;
+    box-shadow:0 6px 16px -8px rgba(0,0,0,.7);
+  }
+  .env .flap{
+    position:absolute; left:0; right:0; top:0; height:22px; border-radius:9px 9px 0 0;
+    background:linear-gradient(180deg,#e6d8bd,#f4ead8);
+    clip-path:polygon(0 0,100% 0,50% 100%);
+  }
+  .env .chip{
+    position:absolute; left:50%; bottom:-9px; transform:translateX(-50%);
+    font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.03em;
+    background:#241f3d; color:var(--accent); border:1px solid #4a4172;
+    border-radius:6px; padding:2px 5px; white-space:nowrap;
+  }
+  .env.caught .body{background:#ffd9de}
+  .env.caught .chip{color:var(--third); border-color:rgba(232,105,125,.6)}
+
+  #piles{
+    position:absolute; left:12px; right:12px; bottom:8px; height:82px;
+    display:flex; gap:6px; align-items:flex-end; justify-content:flex-start;
+  }
+  .pile{display:flex; flex-direction:column-reverse; align-items:center; gap:2px; min-width:0}
+  .pile .dot{
+    width:20px; height:13px; border-radius:3px; background:#f4ead8;
+    box-shadow:0 2px 5px -2px rgba(0,0,0,.6);
+    animation:pop .34s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  @keyframes pop{from{transform:scale(.3) translateY(-14px); opacity:0} to{transform:none; opacity:1}}
+  .pile .plabel{
+    font-family:var(--mono); font-size:8.5px; color:var(--faint);
+    margin-top:3px; max-width:52px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  #shortlistbox{flex:0 0 30%; max-width:330px}
+  #shortlist{display:flex; flex-direction:column; gap:5px; overflow:hidden; flex:1}
+  .cand{
+    font-family:var(--mono); font-size:10px; padding:5px 8px; border-radius:8px;
+    background:rgba(255,255,255,.045); border:1px solid var(--line); color:var(--dim);
+    display:flex; justify-content:space-between; gap:8px; align-items:center;
+    animation:slidein .3s ease both;
+  }
+  .cand b{font-weight:600; color:var(--ink); letter-spacing:-.02em}
+  .cand.you{
+    border-color:rgba(255,209,102,.7); color:var(--accent);
+    background:rgba(255,209,102,.10);
+  }
+  .cand.you b{color:var(--accent)}
+  .cand span{font-size:9px; color:var(--faint)}
+  .cand.you span{color:rgba(255,209,102,.72)}
+  @keyframes slidein{from{opacity:0; transform:translateX(10px)} to{opacity:1; transform:none}}
+  #blockbox{flex:0 0 26%; max-width:300px}
+  #blockwrap{
+    border:2px dashed rgba(111,211,199,.42); border-radius:13px; padding:9px;
+    display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; flex:1; overflow:hidden;
+    position:relative; transition:border-color .4s;
+  }
+  #blockwrap.tight{border-color:rgba(232,105,125,.55); border-style:solid}
+  #blocktag{
+    position:absolute; top:-9px; left:11px; background:var(--panel);
+    font-family:var(--mono); font-size:9.5px; color:var(--librarian);
+    padding:1px 6px; border-radius:5px; border:1px solid var(--line);
+  }
+  .mem{
+    width:9px; height:9px; border-radius:50%; background:#4a4172;
+    animation:pop .3s ease both;
+  }
+  .mem.you{background:var(--accent); box-shadow:0 0 0 3px rgba(255,209,102,.18)}
+  .mem.gone{opacity:0; transform:scale(.2)}
+  #blocknote{font-size:10.5px; color:var(--faint); line-height:1.45; margin-top:8px}
+
+  /* ---------- dial + readout ---------- */
+  #controls{
+    display:flex; align-items:center; gap:18px; padding-right:var(--cardw,0px);
+  }
+  #dialzone{display:flex; align-items:center; gap:13px; flex:0 0 auto}
+  #dial{
+    width:96px; height:96px; position:relative; cursor:grab; touch-action:none;
+    user-select:none; -webkit-user-select:none;
+  }
+  #dial.grabbing{cursor:grabbing}
+  #dial.locked{cursor:not-allowed; opacity:.55}
+  #dial svg{position:absolute; inset:0; width:100%; height:100%; display:block}
+  #knob{transform-origin:50px 50px; transition:transform .18s cubic-bezier(.3,1.4,.5,1)}
+  #dial.grabbing #knob{transition:none}
+  #dial .kval{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; pointer-events:none;
+  }
+  #dial .kval b{font-family:var(--mono); font-size:21px; font-weight:700; line-height:1; color:var(--ink)}
+  #dial .kval i{font-style:normal; font-family:var(--mono); font-size:8px; color:var(--faint); letter-spacing:.1em; margin-top:3px}
+  #dialhint{font-size:11px; color:var(--dim); max-width:180px; line-height:1.45}
+  #dialhint .lock{color:var(--accent); font-weight:700}
+  #ticks{display:flex; gap:3px; align-items:flex-end; margin-top:7px}
+  #ticks button{
+    font-family:var(--mono); font-size:9.5px; padding:3px 5px; border-radius:6px;
+    background:rgba(255,255,255,.045); color:var(--faint); border:1px solid var(--line);
+    cursor:pointer; line-height:1.2;
+  }
+  #ticks button:hover{color:var(--ink)}
+  #ticks button[aria-current="true"]{background:rgba(255,209,102,.15); color:var(--accent); border-color:rgba(255,209,102,.5)}
+  #ticks button:disabled{opacity:.4; cursor:not-allowed}
+
+  #readout{
+    flex:1 1 auto; display:flex; gap:9px; flex-wrap:wrap; align-items:center; min-width:0;
+  }
+  .stat{
+    background:var(--panel); border:1px solid var(--line); border-radius:11px;
+    padding:7px 11px; min-width:112px;
+  }
+  .stat .k{font-family:var(--mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)}
+  .stat .v{font-family:var(--mono); font-size:19px; font-weight:700; line-height:1.15; margin-top:2px}
+  .stat .m{font-family:var(--mono); font-size:9.5px; color:var(--faint); margin-top:1px}
+  .stat.w .v{color:var(--watcher)} .stat.l .v{color:var(--librarian)} .stat.t .v{color:var(--third)}
+  #legend{
+    flex:1 0 100%; font-family:var(--mono); font-size:9.5px; color:var(--faint);
+    letter-spacing:.04em; margin-top:-1px;
+  }
+
+  /* ---------- beat text ---------- */
+  #beats{position:relative; z-index:2}
+  .beat{
+    min-height:88vh; display:flex; align-items:center; justify-content:flex-end;
+    padding:14vh 34px 14vh 34px;
+  }
+  .beat .card{
+    max-width:430px; background:rgba(20,17,34,.94); border:1px solid var(--line);
+    border-radius:18px; padding:20px 22px 22px;
+    box-shadow:0 26px 60px -30px rgba(0,0,0,.9);
+  }
+  .beat .n{
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--faint);
+    text-transform:uppercase;
+  }
+  .beat h2{margin:7px 0 10px; font-size:22px; line-height:1.2; letter-spacing:-.02em; font-weight:800}
+  .beat p{margin:0 0 10px; font-size:14px; line-height:1.62; color:#d7cfe8}
+  .beat p:last-child{margin-bottom:0}
+  .beat .accent{color:var(--accent)}
+  .beat .w{color:var(--watcher)} .beat .l{color:var(--librarian)} .beat .t{color:var(--third)}
+  .beat code{
+    font-family:var(--mono); font-size:12px; background:rgba(255,255,255,.06);
+    border-radius:5px; padding:1px 5px; color:var(--ink);
+  }
+  .beat .try{
+    margin-top:13px; border-top:1px dashed var(--line); padding-top:11px;
+    font-size:12.5px; color:var(--dim); line-height:1.55;
+  }
+  .beat .try b{color:var(--accent); font-weight:700}
+  .beat:last-child .card{border-color:rgba(232,105,125,.42)}
+  #colophon{
+    position:relative; z-index:2; padding:40px 34px 70px; max-width:760px; margin:0 auto;
+    font-size:12px; color:var(--faint); line-height:1.7;
+  }
+  #colophon b{color:var(--dim)}
+  #colophon .box{
+    border:1px solid var(--line); border-radius:14px; padding:16px 18px; background:var(--panel);
+  }
+  #colophon table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; margin-top:9px}
+  #colophon th,#colophon td{text-align:right; padding:3px 6px; border-bottom:1px solid rgba(255,255,255,.05)}
+  #colophon th:first-child,#colophon td:first-child{text-align:left}
+  #colophon th{color:var(--dim); font-weight:600}
+  #colophon td.meas{color:var(--accent)}
+
+  @media (max-width:1239px){
+    /* not enough room for a side column: the card slides over the scene,
+       so make it properly opaque rather than a ghost on top of the dial */
+    .beat .card{background:rgba(18,15,30,.97); backdrop-filter:blur(8px)}
+  }
+  @media (max-height:820px){
+    .who .role{display:none}
+    .who .says{min-height:0; margin-top:4px}
+    #blockwrap{max-height:72px}
+  }
+  @media (max-width:1080px){
+    #stage{flex-wrap:wrap}
+    #shortlistbox,#blockbox{flex:1 1 46%; max-width:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="scene">
+  <div id="topbar">
+    <h1>Three Watchers</h1>
+    <span class="tag">preview &middot; not connected to miden</span>
+    <span id="beatname">beat <b>1</b> &middot; <span id="beattitle">the envelope is public</span></span>
+  </div>
+
+  <div id="cast">
+    <figure class="who" data-c="watcher" id="who-watcher">
+      <svg viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <div class="txt">
+        <div class="nm">The Watcher on the wire</div>
+        <div class="role">sees labels go past. knows no account numbers.</div>
+        <div class="says">&hellip;</div>
+        <div class="metric"><em>link rate</em> &mdash;</div>
+      </div>
+    </figure>
+    <figure class="who" data-c="librarian" id="who-librarian">
+      <svg viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <div class="txt">
+        <div class="nm">The Librarian</div>
+        <div class="role">holds the public directory of every account number.</div>
+        <div class="says">&hellip;</div>
+        <div class="metric"><em>shortlist</em> &mdash;</div>
+      </div>
+    </figure>
+    <figure class="who third" data-c="third" id="who-third">
+      <svg viewBox="0 0 100 100" aria-hidden="true"></svg>
+      <div class="txt">
+        <div class="nm">The One Who Knows You</div>
+        <div class="role">already has your account number on a card.</div>
+        <div class="says">&hellip;</div>
+        <div class="metric"><em>caught</em> &mdash;</div>
+      </div>
+    </figure>
+  </div>
+
+  <div id="stage">
+    <div class="panelbox" id="lanebox">
+      <h3>six payments to you</h3>
+      <div id="lane">
+        <div class="lane-rule"></div>
+        <div class="lane-cap l">sender</div>
+        <div class="lane-cap r">you</div>
+      </div>
+      <div id="piles"></div>
+    </div>
+
+    <div class="panelbox hidden" id="shortlistbox">
+      <h3>the librarian&rsquo;s shortlist</h3>
+      <div id="shortlist"></div>
+    </div>
+
+    <div class="panelbox hidden" id="blockbox">
+      <h3>the block the label named</h3>
+      <div id="blockwrap"><span id="blocktag">&mdash;</span></div>
+      <div id="blocknote"></div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div id="dialzone">
+      <div id="dial" class="locked" role="slider" tabindex="0"
+           aria-label="pool width k" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="45" fill="#1b1830" stroke="#322c50" stroke-width="2"/>
+          <path id="arc" d="" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+          <g id="knob">
+            <line x1="50" y1="50" x2="50" y2="12" stroke="#f4ead8" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="50" cy="14" r="4.5" fill="#ffd166"/>
+          </g>
+        </svg>
+        <div class="kval"><b id="klabel">LEG</b><i id="ksub">legacy</i></div>
+      </div>
+      <div>
+        <div id="dialhint"><span class="lock">Locked.</span> This payment was sent the ordinary way. There is nothing to choose yet.</div>
+        <div id="ticks"></div>
+      </div>
+    </div>
+    <div id="readout">
+      <div class="stat w"><div class="k">link rate</div><div class="v" id="s-link">&mdash;</div><div class="m" id="s-linkm">watcher on the wire</div></div>
+      <div class="stat l"><div class="k">attribution</div><div class="v" id="s-attr">&mdash;</div><div class="m" id="s-attrm">librarian</div></div>
+      <div class="stat l"><div class="k">candidate set</div><div class="v" id="s-cand">&mdash;</div><div class="m" id="s-candm">names on the shortlist</div></div>
+      <div class="stat t"><div class="k">targeted</div><div class="v" id="s-third">&mdash;</div><div class="m" id="s-thirdm">the one who knows you</div></div>
+      <div id="legend">big numbers = this crowd &nbsp;&middot;&nbsp; small lines = measured, Stage&nbsp;6, on 128 real account ids</div>
+    </div>
+  </div>
+</div>
+
+<main id="beats">
+  <section class="beat" data-beat="1">
+    <div class="card">
+      <div class="n">beat one</div>
+      <h2>The envelope is public.</h2>
+      <p>A Miden private note hides what it <em>says</em> &mdash; the amount, the asset, the recipient&rsquo;s
+      details are sealed. But the note still has to be filed somewhere the network can find it.</p>
+      <p>So it is filed under a <span class="accent">label</span>: a 32-bit <b>tag</b>, visible to anyone
+      who asks. By default that label is derived straight from the receiver&rsquo;s account number.</p>
+      <div class="try">Watch the envelope cross. The label on its front is the only thing anyone can read.</div>
+    </div>
+  </section>
+
+  <section class="beat" data-beat="2">
+    <div class="card">
+      <div class="n">beat two</div>
+      <h2>Every payment to you looks the same.</h2>
+      <p>Send six payments the ordinary way and all six carry <span class="accent">one identical label</span>,
+      because the label is a function of your account number and your account number does not change.</p>
+      <p><span class="w">The Watcher</span> cannot tell who you are. It can tell that these six belong
+      to one person &mdash; and that is enough to build a spending history out of nothing.</p>
+      <div class="try">Its pile is one pile. <b>Link rate 100%.</b></div>
+    </div>
+  </section>
+
+  <section class="beat" data-beat="3">
+    <div class="card">
+      <div class="n">beat three</div>
+      <h2>The dial.</h2>
+      <p>Instead of filing under your own label, the library files each note under a
+      <em>different label from a pool that also contains yours</em>. That is <b>tag blinding</b>.</p>
+      <p>The dial sets the pool width <code>k</code> &mdash; how many leading bits of your account number
+      the label must still match. Low <code>k</code> is a wide pool: many labels to hide among, more
+      noise for the receiver to fetch. High <code>k</code> is a narrow pool.</p>
+      <div class="try"><b>Drag the dial.</b> Every label is now different, and the pile falls apart.</div>
+    </div>
+  </section>
+
+  <section class="beat" data-beat="4">
+    <div class="card">
+      <div class="n">beat four</div>
+      <h2>But the Librarian has a directory.</h2>
+      <p>Account numbers are public. So an observer holding the list never needs your labels to repeat
+      &mdash; given <em>any</em> label and the pool width, it can recompute <span class="l">which accounts
+      could have produced it</span>.</p>
+      <p>That list of maybe-accounts is the <b>candidate set</b>. Blinding does not defeat the Librarian.
+      It makes the Librarian <em>guess</em>.</p>
+      <div class="try">At the wide end the shortlist holds two or three names and one of them is gold.</div>
+    </div>
+  </section>
+
+  <section class="beat" data-beat="5">
+    <div class="card">
+      <div class="n">beat five</div>
+      <h2>A label names a group, not a person.</h2>
+      <p>The whole tag space is 16,384 default-shaped labels. A pool width of <code>k</code> cuts that
+      space into blocks of <code>2^(14&minus;k)</code>. Your note lands in <em>your</em> block &mdash;
+      always &mdash; because the block is fixed by the leading bits of your account number.</p>
+      <p>Blinding hides the label. <span class="accent">It cannot hide the block.</span>
+      The only thing standing between a label and your name is how many other accounts happen to share
+      your block.</p>
+      <div class="try">Drag the dial and watch the dots leave the box. That box is a block. You are the gold dot.</div>
+    </div>
+  </section>
+
+  <section class="beat" data-beat="6">
+    <div class="card">
+      <div class="n">beat six</div>
+      <h2>The third face never moved.</h2>
+      <p><span class="w">The Watcher</span> is lost. <span class="l">The Librarian</span> is down to a
+      shortlist it cannot shorten. Both were beaten by the dial.</p>
+      <p><span class="t">The One Who Knows You</span> does not have a dial to be beaten by. It holds your
+      account number on a card, computes your pool from it, registers exactly those labels, and waits.</p>
+      <p><b>Thirty-six of thirty-six payments, at every setting of the dial.</b></p>
+      <div class="try">Blinding makes you one face in a crowd. It does not make you invisible to somebody already looking at your face.</div>
+    </div>
+  </section>
+</main>
+
+<div id="colophon">
+  <div class="box">
+    <b>What is real here and what is not.</b><br>
+    This page talks to nothing. No Miden SDK, no chain, no network &mdash; it is a preview of the demo,
+    built so the idea could be seen before the demo was built.
+    <br><br>
+    <b>Real:</b> the account number at the centre of it
+    (<code style="font-family:var(--mono)">0x8e1bed3ae2cca241746ef1ca4bf1ec</code>, recorded from an actual
+    mock-chain run), the label arithmetic (top <code style="font-family:var(--mono)">k</code> bits of the
+    120-bit account number, shifted into the tag, with random fill below &mdash; the same code the library
+    runs), the seven structural bits every Miden account number carries, and the measured figures in the
+    table below, taken from Stage&nbsp;6 on a mock chain with a 128-account directory and 72 notes.
+    <br><br>
+    <b>Stand-in:</b> the other 127 account numbers are generated, not recorded. They obey the same
+    structural invariants as real Miden account numbers &mdash; seven fixed bit positions, uniform
+    everywhere else &mdash; so the crowd behaves the way a real crowd behaves. The generator is seeded,
+    so the page is the same every time you load it.
+    <br><br>
+    The seed was picked from 6,000 candidate crowds, and not for flattery: it reproduces the block
+    sizes measured on the real 128 ids <b>exactly</b> (3, 3, 2, 1, 1, 1 at <code style="font-family:var(--mono)">k</code>
+    = 7, 8, 9, 10, 12, 14) and matches the measured attribution at k=10 and k=14. Its k=7 attribution
+    reads <b>43.8%</b> against a measured <b>35.9%</b> &mdash; which is inside the spread a crowd this
+    size actually shows, and the reason both numbers are on screen at once.
+    <br><br>
+    <b>The spread is the interesting part.</b> Across 40 random crowds of 128, attribution at k=7 has a
+    mean of <b>36.5%</b> and a standard deviation of <b>4.8 points</b>, ranging 25.8&ndash;47.7%. At k=14
+    the mean is 99.5%, sd 0.9. The closed form <code style="font-family:var(--mono)">(1 &minus; 2<sup>&minus;k</sup>)<sup>127</sup></code>
+    is exactly that mean. So any single directory of this size is a <em>sample</em>, not a verdict &mdash;
+    and the real demo will replay one recorded crowd and say which one.
+    <table>
+      <thead><tr><th>pool width <i>k</i></th><th>link rate</th><th>attribution</th><th>accounts in your block</th></tr></thead>
+      <tbody>
+        <tr><td>legacy (no blinding)</td><td class="meas">100%</td><td class="meas">100%</td><td class="meas">1</td></tr>
+        <tr><td>7</td><td class="meas">0%</td><td class="meas">35.9%</td><td class="meas">3</td></tr>
+        <tr><td>8</td><td class="meas">0%</td><td class="meas">66.4%</td><td class="meas">3</td></tr>
+        <tr><td>9</td><td class="meas">not measured</td><td class="meas">82.8%</td><td class="meas">2</td></tr>
+        <tr><td>10</td><td class="meas">33.3%</td><td class="meas">90.6%</td><td class="meas">1</td></tr>
+        <tr><td>12</td><td class="meas">83.3%</td><td class="meas">98.4%</td><td class="meas">1</td></tr>
+        <tr><td>14</td><td class="meas">100%</td><td class="meas">100%</td><td class="meas">1</td></tr>
+        <tr><td><i>targeted observer</i></td><td class="meas" colspan="3">36 / 36 at every width</td></tr>
+      </tbody>
+    </table>
+    <br>
+    Conservative whole-traffic figure from the same run: of 72 notes, <b>6 could be named outright</b>
+    (8.3%), mean candidate set <b>2.71</b>.
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   PART 1 — the arithmetic. This is the same maths the library runs.
+   ===================================================================== */
+
+var ID_HEX_CHARS = 30;      // an account number is 120 bits, printed as 30 hex chars
+var TAG_LEN      = 14;      // a default-shaped tag carries 14 bits of account number
+var RESERVED     = 18;      // the low 18 bits of a default-shaped tag are always zero
+var TAG_SPACE    = 1 << TAG_LEN;   // 16384 default-shaped labels in total
+
+/* A real Miden account number is not uniformly random. Seven bit positions
+   (LSB-numbered 55..61) are structural: bit 56 is always 1, bit 55 always 0,
+   bits 57..61 carry the account kind and storage mode. In a MSB-first bit
+   string of length 120 those are indices 58..64, and they read "0000010"
+   for every default private account. Verified against real recorded ids. */
+var INVARIANT_AT   = 58;              // first index, MSB-first
+var INVARIANT_BITS = "0000010";       // indices 58..64
+
+var _bitsCache = {};
+function idBits(hex){
+  if (_bitsCache[hex]) return _bitsCache[hex];
+  var h = String(hex).replace(/^0x/, "").toLowerCase();
+  while (h.length < ID_HEX_CHARS) h = "0" + h;
+  var s = "";
+  for (var i = 0; i < ID_HEX_CHARS; i++) s += parseInt(h[i], 16).toString(2).padStart(4, "0");
+  _bitsCache[hex] = s;
+  return s;
+}
+function bitsToHex(bits){
+  var h = "";
+  for (var i = 0; i < bits.length; i += 4) h += parseInt(bits.substr(i, 4), 2).toString(16);
+  return "0x" + h;
+}
+/* The label an account gets when nothing is done to it. */
+var _tagCache = {};
+function defaultTag(hex){
+  if (_tagCache[hex] !== undefined) return _tagCache[hex];
+  return (_tagCache[hex] = (parseInt(idBits(hex).slice(0, TAG_LEN), 2) << RESERVED) >>> 0);
+}
+/* A blinded label: keep the top k bits, randomise the rest of the 14. */
+function blindedTag(hex, k, rnd){
+  var bits = idBits(hex);
+  var topK = parseInt(bits.slice(0, k), 2);
+  var free = TAG_LEN - k;
+  var v = (topK << free) | Math.floor(rnd() * (1 << free));
+  return (v << RESERVED) >>> 0;
+}
+/* The pool: every default-shaped label sharing the top k bits. */
+function poolFor(hex, k){
+  var topK = parseInt(idBits(hex).slice(0, k), 2);
+  var free = TAG_LEN - k;
+  var out = [];
+  for (var j = 0; j < (1 << free); j++) out.push(((topK << free) | j) << RESERVED);
+  return out;
+}
+function poolSize(k){ return 1 << (TAG_LEN - k); }
+function tagTop(tag, k){ return (tag >>> RESERVED) >>> (TAG_LEN - k); }
+function tagHex(tag){ return (tag >>> 0).toString(16).padStart(8, "0").slice(0, 5); }
+
+/* --- a deterministic crowd, so reloading gives the same page ---
+   Seed 127917168 was drawn from a search of 6000 crowds. It is not a
+   favourable pick, it is a *representative* one: it reproduces the block
+   sizes measured on 128 real mock-chain ids exactly (3, 3, 2, 1, 1, 1 for
+   k = 7, 8, 9, 10, 12, 14) and its census attribution matches the measured
+   90.6% at k=10 and 100% at k=14. Its k=7 census runs 43.8% against a
+   measured 35.9% — inside the ±4.8 point spread a 128-account crowd shows. */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+var SEED = 127917168;
+var rnd  = mulberry32(SEED);
+
+/* The real account number, from a real mock-chain run. */
+var YOU = "0x8e1bed3ae2cca241746ef1ca4bf1ec";
+
+/* Generate the other 127: uniform random except for the structural bits. */
+function makeDirectory(n){
+  var dir = [YOU];
+  var guard = 0;
+  while (dir.length < n && guard++ < 5000){
+    var bits = "";
+    for (var i = 0; i < 120; i++) bits += (rnd() < 0.5 ? "1" : "0");
+    bits = bits.slice(0, INVARIANT_AT) + INVARIANT_BITS + bits.slice(INVARIANT_AT + INVARIANT_BITS.length);
+    var hex = bitsToHex(bits);
+    if (dir.indexOf(hex) === -1) dir.push(hex);
+  }
+  return dir;
+}
+var DIRECTORY = makeDirectory(128);
+
+/* --- the six payments, and the labels each one actually carried --- */
+var SIX = 6;
+function labelsFor(k){
+  // k === 0 means "legacy": no blinding at all, the default tag six times over.
+  var out = [];
+  for (var i = 0; i < SIX; i++){
+    out.push(k === 0 ? defaultTag(YOU) : blindedTag(YOU, k, rnd));
+  }
+  return out;
+}
+
+/* --- what the Librarian can do with a label --- */
+function candidatesFor(tag, k){
+  var want = tagTop(tag, k);
+  return DIRECTORY.filter(function(id){ return tagTop(defaultTag(id), k) === want; });
+}
+function censusAttribution(k){
+  // For every account in the directory: if a note arrived under its own width-k
+  // pool, could the Librarian name it uniquely?
+  var hit = 0;
+  for (var i = 0; i < DIRECTORY.length; i++){
+    var id = DIRECTORY[i];
+    if (candidatesFor(defaultTag(id), k).length === 1) hit++;
+  }
+  return hit / DIRECTORY.length;
+}
+function linkRate(labels){
+  // The Watcher's power: how many of the six it can tie to at least one other.
+  var counts = {};
+  labels.forEach(function(l){ counts[l] = (counts[l] || 0) + 1; });
+  var linked = 0;
+  labels.forEach(function(l){ if (counts[l] > 1) linked++; });
+  return linked / labels.length;
+}
+function distinctPiles(labels){
+  var seen = {}, out = [];
+  labels.forEach(function(l){ if (!seen[l]){ seen[l] = 1; out.push(l); } });
+  return out;
+}
+
+/* --- moods --- */
+var MOODS = {
+  gleeful:    {brow:  0.55, eye: 1.00, mouth:  1.00, look: 0.0},
+  content:    {brow:  0.15, eye: 0.82, mouth:  0.50, look: 0.0},
+  thoughtful: {brow: -0.20, eye: 0.66, mouth:  0.02, look: 0.4},
+  puzzled:    {brow: -0.55, eye: 0.92, mouth: -0.30, look:-0.5},
+  defeated:   {brow: -0.95, eye: 0.34, mouth: -0.92, look:-0.2},
+  serene:     {brow:  0.22, eye: 0.54, mouth:  0.78, look: 0.0}
+};
+var SERENE = MOODS.serene;   // the third face has exactly one mood, forever
+
+/* =====================================================================
+   PART 2 — the characters, the dial, the envelopes.
+   ===================================================================== */
+
+var $ = function(id){ return document.getElementById(id); };
+var COLORS = {watcher:"#f2a65a", librarian:"#6fd3c7", third:"#e8697d"};
+
+/* A face is one mood vector. Six parameters, drawn fresh each frame,
+   lerped toward a target so expressions change smoothly rather than snapping. */
+function Face(svg, color, shape){
+  this.svg = svg; this.color = color; this.shape = shape || "round";
+  this.cur = {brow:0, eye:0.6, mouth:0, look:0};
+  this.tgt = {brow:0, eye:0.6, mouth:0, look:0};
+  svg.innerHTML =
+    '<g class="fbody"></g>' +
+    '<g class="fface">' +
+      '<path class="fbrowL" stroke="#2a2340" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+      '<path class="fbrowR" stroke="#2a2340" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+      '<ellipse class="feyeL" fill="#fffdf7"/>' +
+      '<ellipse class="feyeR" fill="#fffdf7"/>' +
+      '<circle class="fpupL" r="3.4" fill="#241f3d"/>' +
+      '<circle class="fpupR" r="3.4" fill="#241f3d"/>' +
+      '<path class="fmouth" stroke="#2a2340" stroke-width="3.6" stroke-linecap="round" fill="none"/>' +
+    '</g>' +
+    '<g class="fprop"></g>';
+  this.g = {};
+  ["fbody","fbrowL","fbrowR","feyeL","feyeR","fpupL","fpupR","fmouth","fprop"]
+    .forEach(function(k){ this.g[k] = svg.querySelector("." + k); }, this);
+  this.paintBody();
+}
+Face.prototype.paintBody = function(){
+  var c = this.color, b = this.g.fbody, p = this.g.fprop;
+  if (this.shape === "square"){
+    b.innerHTML = '<rect x="14" y="20" width="72" height="66" rx="17" fill="'+c+'"/>' +
+                  '<rect x="14" y="20" width="72" height="30" rx="17" fill="rgba(255,255,255,.14)"/>';
+    p.innerHTML = '<circle cx="36" cy="52" r="12.5" fill="none" stroke="#2a2340" stroke-width="2.6"/>' +
+                  '<circle cx="64" cy="52" r="12.5" fill="none" stroke="#2a2340" stroke-width="2.6"/>' +
+                  '<line x1="48.5" y1="52" x2="51.5" y2="52" stroke="#2a2340" stroke-width="2.6"/>' +
+                  '<rect x="66" y="66" width="24" height="16" rx="3" fill="#f4ead8" transform="rotate(-9 78 74)"/>' +
+                  '<line x1="70" y1="71" x2="86" y2="68.5" stroke="#9a92b8" stroke-width="1.4" transform="rotate(-9 78 74)"/>' +
+                  '<line x1="70" y1="75" x2="84" y2="72.8" stroke="#9a92b8" stroke-width="1.4" transform="rotate(-9 78 74)"/>';
+  } else if (this.shape === "fox"){
+    b.innerHTML = '<path d="M22 30 L18 8 L40 22 Z" fill="'+c+'"/>' +
+                  '<path d="M78 30 L82 8 L60 22 Z" fill="'+c+'"/>' +
+                  '<circle cx="50" cy="54" r="34" fill="'+c+'"/>' +
+                  '<path d="M16 54 a34 34 0 0 1 68 0 Z" fill="rgba(255,255,255,.10)"/>';
+    p.innerHTML = '<rect x="64" y="60" width="28" height="18" rx="3.5" fill="#f4ead8" transform="rotate(-8 78 69)"/>' +
+                  '<text x="69" y="73" font-family="ui-monospace,monospace" font-size="7.5" fill="#e8697d" transform="rotate(-8 78 69)">0x8e1b</text>' +
+                  '<line x1="69" y1="76" x2="88" y2="76" stroke="#c9bda4" stroke-width="1.3" transform="rotate(-8 78 69)"/>';
+  } else {
+    b.innerHTML = '<circle cx="50" cy="54" r="35" fill="'+c+'"/>' +
+                  '<ellipse cx="50" cy="34" rx="30" ry="16" fill="rgba(255,255,255,.15)"/>';
+    p.innerHTML = '<circle cx="84" cy="70" r="13" fill="none" stroke="#2a2340" stroke-width="3"/>' +
+                  '<line x1="75" y1="61" x2="66" y2="52" stroke="#2a2340" stroke-width="4" stroke-linecap="round"/>' +
+                  '<circle cx="84" cy="70" r="13" fill="rgba(255,255,255,.10)"/>';
+  }
+};
+Face.prototype.set = function(mood){
+  var t = this.tgt;
+  t.brow = mood.brow; t.eye = mood.eye; t.mouth = mood.mouth; t.look = mood.look;
+};
+Face.prototype.step = function(){
+  var c = this.cur, t = this.tgt, a = 0.11;
+  c.brow  += (t.brow  - c.brow)  * a;
+  c.eye   += (t.eye   - c.eye)   * a;
+  c.mouth += (t.mouth - c.mouth) * a;
+  c.look  += (t.look  - c.look)  * a;
+
+  var open = 2.0 + c.eye * 5.6;                 // vertical eye radius
+  var lx = c.look * 2.6;
+  this.g.feyeL.setAttribute("cx", 37); this.g.feyeL.setAttribute("cy", 50);
+  this.g.feyeL.setAttribute("rx", 7.4); this.g.feyeL.setAttribute("ry", open);
+  this.g.feyeR.setAttribute("cx", 63); this.g.feyeR.setAttribute("cy", 50);
+  this.g.feyeR.setAttribute("rx", 7.4); this.g.feyeR.setAttribute("ry", open);
+  this.g.fpupL.setAttribute("cx", 37 + lx); this.g.fpupL.setAttribute("cy", 50 + c.look * 0.8);
+  this.g.fpupR.setAttribute("cx", 63 + lx); this.g.fpupR.setAttribute("cy", 50 + c.look * 0.8);
+  this.g.fpupL.setAttribute("opacity", Math.min(1, open / 3.2));
+  this.g.fpupR.setAttribute("opacity", Math.min(1, open / 3.2));
+
+  // brows: rotate around the inner end, tilt set by mood
+  var tilt = c.brow * 7;
+  this.g.fbrowL.setAttribute("d", "M28 " + (40 + tilt) + " Q37 " + (37 - tilt * 0.4) + " 45 " + (40 - tilt));
+  this.g.fbrowR.setAttribute("d", "M55 " + (40 - tilt) + " Q63 " + (37 - tilt * 0.4) + " 72 " + (40 + tilt));
+
+  // mouth: a quadratic whose control point swings from scowl to grin
+  var my = 70, ctrl = my - c.mouth * 11;
+  var half = 10 + c.mouth * 3;
+  this.g.fmouth.setAttribute("d", "M" + (50 - half) + " " + my + " Q50 " + ctrl + " " + (50 + half) + " " + my);
+};
+
+var faces = {
+  watcher:   new Face($("who-watcher").querySelector("svg"),   COLORS.watcher,   "round"),
+  librarian: new Face($("who-librarian").querySelector("svg"), COLORS.librarian, "square"),
+  third:     new Face($("who-third").querySelector("svg"),     COLORS.third,     "fox")
+};
+faces.third.set(SERENE);
+
+/* ---------------- the dial ---------------- */
+var DETENTS = [
+  {k:0,  label:"LEG", sub:"legacy"},
+  {k:7,  label:"7",   sub:"k = 7"},
+  {k:8,  label:"8",   sub:"k = 8"},
+  {k:9,  label:"9",   sub:"k = 9"},
+  {k:10, label:"10",  sub:"k = 10"},
+  {k:11, label:"11",  sub:"k = 11"},
+  {k:12, label:"12",  sub:"k = 12"},
+  {k:13, label:"13",  sub:"k = 13"},
+  {k:14, label:"14",  sub:"k = 14"}
+];
+var A0 = -132, A1 = 132;   // degrees, knob at rest points up
+var detentIndex = 0;
+var dialUnlocked = false;
+var dialEl = $("dial");
+
+function angleFor(i){ return A0 + (A1 - A0) * (i / (DETENTS.length - 1)); }
+function indexFromAngle(a){
+  var f = (a - A0) / (A1 - A0);
+  return Math.max(0, Math.min(DETENTS.length - 1, Math.round(f * (DETENTS.length - 1))));
+}
+function polar(cx, cy, r, deg){
+  var rad = (deg - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+}
+function arcPath(i){
+  if (i <= 0) return "";
+  var a = angleFor(i), p0 = polar(50, 50, 45, A0), p1 = polar(50, 50, 45, a);
+  var big = (a - A0) > 180 ? 1 : 0;
+  return "M" + p0[0] + " " + p0[1] + " A45 45 0 " + big + " 1 " + p1[0] + " " + p1[1];
+}
+function paintDial(){
+  var d = DETENTS[detentIndex], a = angleFor(detentIndex);
+  $("knob").setAttribute("transform", "rotate(" + a + " 50 50)");
+  $("arc").setAttribute("d", arcPath(detentIndex));
+  $("klabel").textContent = d.label;
+  $("ksub").textContent = d.sub;
+  dialEl.setAttribute("aria-valuenow", String(detentIndex));
+  var btns = $("ticks").children;
+  for (var i = 0; i < btns.length; i++)
+    btns[i].setAttribute("aria-current", i === detentIndex ? "true" : "false");
+}
+function buildTicks(){
+  var wrap = $("ticks");
+  wrap.innerHTML = "";
+  DETENTS.forEach(function(d, i){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = d.k === 0 ? "legacy" : String(d.k);
+    b.addEventListener("click", function(){ if (dialUnlocked) setDetent(i, true); });
+    wrap.appendChild(b);
+  });
+}
+function setDetent(i, userDriven){
+  i = Math.max(0, Math.min(DETENTS.length - 1, i));
+  if (!dialUnlocked && i !== 0) i = 0;
+  if (i === detentIndex && !userDriven) { paintDial(); return; }
+  detentIndex = i;
+  paintDial();
+  onDialMove(userDriven);
+}
+function unlockDial(msg){
+  if (dialUnlocked) return;
+  dialUnlocked = true;
+  dialEl.classList.remove("locked");
+  $("dialhint").innerHTML = msg || "Unlocked. <b>Drag it</b>, or tap a width below.";
+  buildTicks();
+  paintDial();
+}
+function lockDial(msg){
+  dialUnlocked = false;
+  dialEl.classList.add("locked");
+  detentIndex = 0;
+  $("dialhint").innerHTML = msg;
+  buildTicks();
+  paintDial();
+}
+/* pointer drag → angle → nearest detent */
+(function(){
+  var dragging = false;
+  function angleAt(ev){
+    var r = dialEl.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var deg = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90;
+    while (deg > 180) deg -= 360;
+    while (deg < -180) deg += 360;
+    return Math.max(A0, Math.min(A1, deg));
+  }
+  dialEl.addEventListener("pointerdown", function(ev){
+    if (!dialUnlocked) {
+      dialEl.animate(
+        [{transform:"translateX(0)"},{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"translateX(0)"}],
+        {duration:260});
+      return;
+    }
+    dragging = true; dialEl.classList.add("grabbing");
+    dialEl.setPointerCapture(ev.pointerId);
+    setDetent(indexFromAngle(angleAt(ev)), true);
+    ev.preventDefault();
+  });
+  dialEl.addEventListener("pointermove", function(ev){
+    if (!dragging) return;
+    setDetent(indexFromAngle(angleAt(ev)), true);
+  });
+  var end = function(){ dragging = false; dialEl.classList.remove("grabbing"); };
+  dialEl.addEventListener("pointerup", end);
+  dialEl.addEventListener("pointercancel", end);
+  dialEl.addEventListener("keydown", function(ev){
+    if (!dialUnlocked) return;
+    if (ev.key === "ArrowRight" || ev.key === "ArrowUp"){ setDetent(detentIndex + 1, true); ev.preventDefault(); }
+    if (ev.key === "ArrowLeft"  || ev.key === "ArrowDown"){ setDetent(detentIndex - 1, true); ev.preventDefault(); }
+  });
+})();
+
+/* ---------------- the envelopes ---------------- */
+var lane = $("lane"), pilesEl = $("piles");
+var live = [];          // envelopes in flight
+var emitTimer = 0;
+var emitEvery = 1500;   // ms between payments
+var travelMs  = 2400;
+var caught = 0, emitted = 0;
+var laneEnabled = true;
+
+function laneWidth(){ return Math.max(120, lane.clientWidth - 74); }
+
+function spawnEnvelope(label, isYours){
+  var el = document.createElement("div");
+  el.className = "env";
+  el.innerHTML = '<div class="body"></div><div class="flap"></div>' +
+                 '<div class="chip">' + tagHex(label) + '</div>';
+  lane.appendChild(el);
+  var rec = {el:el, label:label, born:performance.now(), w:laneWidth(), done:false};
+  live.push(rec);
+  emitted++;
+  if (isYours) { caught++; el.classList.add("caught"); }
+  return rec;
+}
+function landEnvelope(rec){
+  rec.done = true;
+  if (rec.el.parentNode) rec.el.parentNode.removeChild(rec.el);
+  var key = tagHex(rec.label);
+  var pile = pilesEl.querySelector('[data-l="' + key + '"]');
+  if (!pile){
+    pile = document.createElement("div");
+    pile.className = "pile"; pile.setAttribute("data-l", key);
+    pile.innerHTML = '<div class="plabel">' + key + '</div>';
+    pilesEl.appendChild(pile);
+  }
+  if (pile.children.length > 8) pile.removeChild(pile.firstChild);
+  var dot = document.createElement("div");
+  dot.className = "dot";
+  pile.insertBefore(dot, pile.firstChild);
+}
+function clearPiles(){ pilesEl.innerHTML = ""; }
+
+function frameEnvelopes(now){
+  for (var i = live.length - 1; i >= 0; i--){
+    var r = live[i];
+    var t = (now - r.born) / travelMs;
+    if (t >= 1){ landEnvelope(r); live.splice(i, 1); continue; }
+    var ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+    var x = ease * r.w;
+    var bob = Math.sin(t * Math.PI * 3) * 4;
+    r.el.style.transform = "translateX(" + x.toFixed(1) + "px) translateY(" + bob.toFixed(1) + "px)";
+  }
+}
+
+/* ---------------- the Librarian's shortlist ---------------- */
+function renderShortlist(label, ek){
+  var box = $("shortlist");
+  box.innerHTML = "";
+  var cands = candidatesFor(label, ek);
+  cands.slice(0, 9).forEach(function(id, i){
+    var el = document.createElement("div");
+    var you = id === YOU;
+    el.className = "cand" + (you ? " you" : "");
+    el.style.animationDelay = (i * 35) + "ms";
+    el.innerHTML = "<b>" + id.slice(2, 12) + "&hellip;</b><span>" + (you ? "you" : "maybe") + "</span>";
+    box.appendChild(el);
+  });
+  if (cands.length > 9){
+    var more = document.createElement("div");
+    more.className = "cand";
+    more.innerHTML = "<b>&hellip; and " + (cands.length - 9) + " more</b><span></span>";
+    box.appendChild(more);
+  }
+  if (!cands.length){
+    box.innerHTML = '<div class="cand"><b>no account in the directory</b><span>matches</span></div>';
+  }
+  return cands;
+}
+
+/* ---------------- the block ---------------- */
+var blockMem = [];   // {el, id}
+function buildBlock(k, ek){
+  var wrap = $("blockwrap");
+  wrap.querySelectorAll(".mem").forEach(function(n){ n.parentNode.removeChild(n); });
+  blockMem = [];
+  $("blocktag").textContent = (k === 0 ? "legacy  " : "k = " + k + "  ") + idBits(YOU).slice(0, ek) + "\u2026";
+  DIRECTORY.forEach(function(id, i){
+    var el = document.createElement("div");
+    el.className = "mem" + (id === YOU ? " you" : "");
+    el.style.animationDelay = Math.min(i * 6, 400) + "ms";
+    wrap.appendChild(el);
+    blockMem.push({el:el, id:id});
+  });
+  updateBlock(ek);
+}
+function updateBlock(ek){
+  if (ek === undefined) ek = currentEK;
+  var mine = tagTop(defaultTag(YOU), ek);
+  var inside = 0;
+  blockMem.forEach(function(m){
+    var hit = tagTop(defaultTag(m.id), ek) === mine;
+    m.el.classList.toggle("gone", !hit);
+    if (hit) inside++;
+  });
+  $("blockwrap").classList.toggle("tight", inside <= 1);
+  var pool = poolSize(ek);
+  $("blocknote").innerHTML =
+    "<b>" + inside + "</b> of the " + DIRECTORY.length + " accounts in the directory share your block at this width. " +
+    "The block holds <b>" + pool + "</b> labels, and your note is always inside it.";
+  return inside;
+}
+
+/* =====================================================================
+   PART 3 — the six beats, and what each character does in them.
+   ===================================================================== */
+
+var BEATS = {
+  1:{title:"the envelope is public",              lit:[],                              dial:"lock",
+     dialMsg:"<span class=\"lock\">Locked.</span> This payment was sent the ordinary way. There is nothing to choose yet.",
+     shortlist:false, block:false, every:2600, catchTint:false},
+  2:{title:"every payment to you looks the same", lit:["watcher"],                     dial:"lock",
+     dialMsg:"<span class=\"lock\">Locked.</span> Sent the ordinary way &mdash; one label, six times.",
+     shortlist:false, block:false, every:1500, catchTint:false},
+  3:{title:"the dial",                            lit:["watcher"],                     dial:"unlock",
+     dialMsg:"Unlocked. <b>Drag it</b>, or tap a width below.",
+     shortlist:false, block:false, every:1300, catchTint:false},
+  4:{title:"but the librarian has a directory",   lit:["watcher","librarian"],         dial:"unlock",
+     dialMsg:"Unlocked. <b>Drag it</b> &mdash; now watch the shortlist.",
+     shortlist:true,  block:false, every:1500, catchTint:false},
+  5:{title:"a label names a group, not a person", lit:["librarian"],                   dial:"unlock",
+     dialMsg:"Unlocked. <b>Drag it</b> and watch the dots leave the box.",
+     shortlist:true,  block:true,  every:1700, catchTint:false},
+  6:{title:"the third face never moved",          lit:["watcher","librarian","third"], dial:"unlock",
+     dialMsg:"Go on. <b>Drag it.</b> Two of them will flinch.",
+     shortlist:true,  block:true,  every:1200, catchTint:true}
+};
+
+var currentBeat = 0;
+var cfg = BEATS[1];
+var currentLabels = [];
+var shortIdx = 0;
+var stats = {link:0, attr:0, cand:1};
+
+/* --- what each character says, keyed to the mood it is actually in --- */
+var SAYS = {
+  watcher:{
+    gleeful:   "One label, six payments. I don't know your name, but I know your whole week.",
+    content:   "Some of these still match. I can hold onto part of it.",
+    puzzled:   "Two of them match. Two. That's not a history, that's a coincidence.",
+    defeated:  "Six labels. Six different labels. There is nothing here to group."
+  },
+  librarian:{
+    gleeful:   "One name on the shortlist. I don't need your labels to repeat — I have the book.",
+    thoughtful:"A shortlist, not an answer. I know it's one of these and I cannot tell you which. So I guess — and guessing is enough.",
+    puzzled:   "A crowd. But it is a crowd I built out of a public list, and you are still standing in it."
+  },
+  third:{
+    serene:    "I have your account number on a card. The dial is not for me."
+  }
+};
+function watcherMood(lr){
+  return lr >= 0.99 ? "gleeful" : lr >= 0.5 ? "content" : lr > 0 ? "puzzled" : "defeated";
+}
+/* The Librarian's face follows the shortlist it is visibly holding, not the
+   population census. Note what is missing: it has no "defeated" mood at all.
+   Blinding never beats the Librarian, it only ever makes it guess. */
+function librarianMood(n){
+  return n <= 1 ? "gleeful" : n <= 3 ? "thoughtful" : "puzzled";
+}
+function fmtN(x){ return Number.isInteger(x) ? String(x) : x.toFixed(2); }
+
+/* Legacy send is not "k = 0" for an observer: the default label exposes all
+   14 bits, so the Librarian and the block maths must treat it as k = 14. */
+function effK(k){ return k === 0 ? TAG_LEN : k; }
+var currentEK = TAG_LEN;
+
+/* --- recompute everything that depends on k --- */
+function recompute(){
+  var k = DETENTS[detentIndex].k;
+  var ek = effK(k);
+  currentEK = ek;
+  rnd = mulberry32(SEED + 7919 * (k + 1));   // fresh, stable randomness per width
+  currentLabels = labelsFor(k);
+
+  stats.link = linkRate(currentLabels);
+  stats.attr = censusAttribution(ek);
+  var tot = 0;
+  for (var i = 0; i < currentLabels.length; i++) tot += candidatesFor(currentLabels[i], ek).length;
+  stats.cand = tot / currentLabels.length;
+
+  clearPiles();
+  live.forEach(function(r){ if (r.el.parentNode) r.el.parentNode.removeChild(r.el); });
+  live = [];
+  emitted = 0; caught = 0;
+  shortIdx = 0;
+
+  if (cfg.block) buildBlock(k, ek);
+  renderFaces();
+  renderStats(k);
+  if (cfg.shortlist) renderShortlist(currentLabels[0], ek);
+}
+
+/* "Awake" and "spotlit" are different things. A character wakes up at the beat
+   that introduces it and then keeps its real expression for the rest of the
+   page — so in beat five the Watcher is still visibly defeated in the
+   background while the Librarian takes the spotlight. */
+var AWAKE = {watcher:2, librarian:4, third:6};
+
+function renderFaces(){
+  var lit = cfg.lit;
+  ["watcher","librarian","third"].forEach(function(name){
+    var el = $("who-" + name);
+    var awake = currentBeat >= AWAKE[name];
+    el.classList.toggle("lit", lit.indexOf(name) !== -1);
+    el.classList.toggle("asleep", !awake);
+  });
+
+  if (currentBeat >= AWAKE.watcher){
+    var wm = watcherMood(stats.link);
+    faces.watcher.set(MOODS[wm]);
+    setSays("watcher", SAYS.watcher[wm]);
+    setMetric("watcher", "<em>link rate</em> " + pct(stats.link));
+  } else {
+    faces.watcher.set(MOODS.content);
+    setSays("watcher", "Not awake yet. Nothing on the wire looks interesting.");
+    setMetric("watcher", "<em>link rate</em> &mdash;");
+  }
+
+  if (currentBeat >= AWAKE.librarian){
+    var lm = librarianMood(stats.cand);
+    faces.librarian.set(MOODS[lm]);
+    setSays("librarian", SAYS.librarian[lm]);
+    setMetric("librarian", "<em>shortlist</em> " + fmtN(stats.cand) +
+              (stats.cand === 1 ? " name" : " names"));
+  } else {
+    faces.librarian.set(MOODS.content);
+    setSays("librarian", "The book is closed. No label has come past worth looking up.");
+    setMetric("librarian", "<em>shortlist</em> &mdash;");
+  }
+
+  /* The third face has exactly one mood. It is set once and never reassigned. */
+  faces.third.set(SERENE);
+  setSays("third", currentBeat >= AWAKE.third
+    ? SAYS.third.serene
+    : "Watching. It is always watching. It just isn't the point yet.");
+  setMetric("third", currentBeat >= AWAKE.third
+    ? "<em>caught</em> " + caught + " / " + emitted
+    : "<em>caught</em> &mdash;");
+}
+function setSays(name, text){ $("who-" + name).querySelector(".says").textContent = text; }
+function setMetric(name, html){ $("who-" + name).querySelector(".metric").innerHTML = html; }
+function pct(x){ return (x * 100).toFixed(x >= 0.995 || x <= 0.005 ? 0 : 1) + "%"; }
+
+/* Stage 6, measured on a mock chain: a directory of 128 real account ids,
+   72 notes. "cand" is the target's own block size at that width. */
+var MEASURED = {
+  0: {link:100,   attr:100,   cand:1},
+  7: {link:0,     attr:35.9,  cand:3},
+  8: {link:0,     attr:66.4,  cand:3},
+  9: {link:null,  attr:82.8,  cand:2},
+  10:{link:33.3,  attr:90.6,  cand:1},
+  11:{link:null,  attr:95.3,  cand:1},
+  12:{link:83.3,  attr:98.4,  cand:1},
+  13:{link:null,  attr:100,   cand:1},
+  14:{link:100,   attr:100,   cand:1}
+};
+function fmtMeas(x, unit){
+  return x === null ? "not measured" : x + (unit || "");
+}
+function renderStats(k){
+  var m = MEASURED[k] || MEASURED[14];
+  $("s-link").textContent  = pct(stats.link);
+  $("s-linkm").textContent = (k === 0 ? "legacy" : "k = " + k) + " · measured " + fmtMeas(m.link, "%");
+  $("s-attr").textContent  = pct(stats.attr);
+  $("s-attrm").textContent = "measured " + fmtMeas(m.attr, "%") + " on 128 real ids";
+  $("s-cand").textContent  = fmtN(stats.cand);
+  $("s-candm").textContent = "measured " + fmtMeas(m.cand) + " in your block";
+  $("s-third").textContent = "36/36";
+  $("s-thirdm").textContent = "at every width";
+}
+
+/* --- beat switching --- */
+function enterBeat(n){
+  if (n === currentBeat) return;
+  currentBeat = n;
+  cfg = BEATS[n];
+
+  $("beatname").innerHTML = "beat <b>" + n + "</b> &middot; " + cfg.title;
+  $("shortlistbox").classList.toggle("hidden", !cfg.shortlist);
+  $("blockbox").classList.toggle("hidden", !cfg.block);
+
+  if (cfg.dial === "unlock") unlockDial(cfg.dialMsg);
+  else { detentIndex = 0; lockDial(cfg.dialMsg); }
+
+  emitEvery = cfg.every;
+  recompute();
+  layout();
+}
+
+/* =====================================================================
+   PART 4 — the loop, the scroll, the start.
+   ===================================================================== */
+
+var last = performance.now(), acc = 0;
+function loop(now){
+  var dt = Math.min(64, now - last); last = now;
+
+  faces.watcher.step(); faces.librarian.step(); faces.third.step();
+  frameEnvelopes(now);
+
+  acc += dt;
+  if (acc >= emitEvery){
+    acc = 0;
+    var label = currentLabels[shortIdx % currentLabels.length];
+    shortIdx = (shortIdx + 1) % Math.max(1, currentLabels.length);
+    spawnEnvelope(label, cfg.catchTint);
+    if (cfg.shortlist) renderShortlist(label, currentEK);
+    if (cfg.block) updateBlock(currentEK);
+    if (currentBeat >= AWAKE.third)
+      setMetric("third", "<em>caught</em> " + caught + " / " + emitted);
+  }
+  requestAnimationFrame(loop);
+}
+
+function onDialMove(){ recompute(); }
+
+/* keep the pinned scene clear of the cards that scroll over it.
+   Side-by-side only when there is room for both: the scene needs ~900px
+   of its own and the card column ~464px. Below that the card slides over
+   the scene, which is the normal scrollytelling behaviour on narrow pages. */
+function layout(){
+  var cardw = window.innerWidth >= 1240 ? 486 : 0;
+  $("scene").style.setProperty("--cardw", cardw + "px");
+}
+window.addEventListener("resize", function(){ layout(); paintDial(); });
+
+/* scroll wiring: whichever beat covers the most of the viewport is the beat.
+   Ratios are kept per section and re-argmaxed on every callback — latching
+   onto a running maximum would stick on the first beat that scrolled past. */
+(function(){
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".beat"));
+  var ratios = {};
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      ratios[e.target.getAttribute("data-beat")] = e.intersectionRatio;
+    });
+    var bestN = 1, bestR = -1;
+    for (var n in ratios) if (ratios[n] > bestR){ bestR = ratios[n]; bestN = parseInt(n, 10); }
+    if (bestR > 0.01) enterBeat(bestN);
+  }, {threshold:[0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]});
+  sections.forEach(function(s){ io.observe(s); });
+})();
+
+/* --- start --- */
+buildTicks();
+layout();
+enterBeat(1);
+requestAnimationFrame(loop);
+
+/* so the page can be poked from outside if you want to check a number */
+window.__PREVIEW__ = {
+  get beat(){ return currentBeat; },
+  get k(){ return DETENTS[detentIndex].k; },
+  get stats(){ return stats; },
+  get labels(){ return currentLabels.map(tagHex); },
+  you: YOU,
+  directorySize: DIRECTORY.length,
+  setWidth: function(k){
+    var i = DETENTS.findIndex(function(d){ return d.k === k; });
+    if (i >= 0){ unlockDial(); setDetent(i, true); }
+  },
+  goToBeat: enterBeat,
+  censusAttribution: censusAttribution,
+  defaultTagOfYou: defaultTag(YOU),
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UI map — every element, with an ID</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --line:#e2ddd2; --line2:#efebe3;
+    --ink:#1d1b22; --dim:#58526a; --faint:#8a8399;
+    --free:#0d6b60; --fixed:#9c5316; --struct:#a32348; --accent:#8a5a00;
+    --round:"Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg); color:var(--ink); font-family:var(--round);
+       font-size:15px; line-height:1.62; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px 90px}
+
+  header.top{padding:48px 0 20px; border-bottom:1px solid var(--line)}
+  .kicker{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--faint)}
+  h1{margin:8px 0 12px; font-size:32px; line-height:1.15; letter-spacing:-.02em; font-weight:700}
+  .lede{font-size:16px; color:#39344a; max-width:720px; margin:0 0 10px}
+  .lede.small{font-size:14px; color:var(--dim)}
+
+  .plain{margin:28px 0 8px; padding:22px 24px; background:var(--panel);
+         border:1px solid var(--line); border-radius:8px}
+  .plain h2{margin:0 0 12px; font-size:18px; letter-spacing:-.01em}
+  .plain p{margin:0 0 12px; font-size:15px; color:#2e2a3d}
+  .plain p:last-child{margin-bottom:0}
+  .plain .turn{display:block; margin:18px 0 0; padding-top:14px;
+               border-top:1px solid var(--line2); font-size:15.5px; color:#111; font-weight:600}
+  .plain b{color:#000}
+
+  .scheme{margin:20px 0 8px; display:flex; gap:10px; flex-wrap:wrap}
+  .scheme .card{flex:1 1 230px; background:var(--panel); border:1px solid var(--line);
+                border-radius:8px; padding:13px 15px}
+  .scheme .card h3{margin:0 0 6px; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+                   color:var(--faint); font-family:var(--mono); font-weight:700}
+  .scheme .card p{margin:0; font-size:13px; color:var(--dim); line-height:1.55}
+
+  code.uid{font-family:var(--mono); font-size:11.5px; font-weight:700; color:var(--accent);
+           background:#f6f1e6; border:1px solid #e6dcc6; border-radius:4px;
+           padding:1px 5px; white-space:nowrap}
+  code.uid.g{color:var(--free); background:#eaf4f2; border-color:#cfe6e1}
+  code.uid.r{color:var(--struct); background:#fbeef1; border-color:#f0d4dc}
+  code.uid.n{color:var(--dim); background:#f4f2ee; border-color:var(--line)}
+
+  nav.regions{margin:22px 0 0; padding:11px 0; display:flex; gap:4px; flex-wrap:wrap;
+              border-bottom:1px solid var(--line)}
+  nav.regions a{font-family:var(--mono); font-size:10.5px; letter-spacing:.05em;
+                color:var(--dim); text-decoration:none; padding:3px 8px;
+                border:1px solid var(--line); border-radius:4px; background:var(--panel)}
+  nav.regions a:hover{color:#000; border-color:#c9c2b2}
+
+  section.region{padding:34px 0 4px; scroll-margin-top:12px}
+  .rhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px}
+  .rhead h2{margin:0; font-size:21px; letter-spacing:-.01em; font-weight:700}
+  .rhead .pfx{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--accent);
+              border:1px solid #e6dcc6; background:#f6f1e6; border-radius:999px; padding:2px 9px}
+  .rhead .count{font-family:var(--mono); font-size:10.5px; color:var(--faint)}
+  .rdesc{margin:0 0 14px; font-size:14px; color:var(--dim); max-width:800px}
+
+  table{width:100%; border-collapse:collapse; margin:4px 0}
+  th{text-align:left; font-family:var(--mono); font-size:9.5px; letter-spacing:.12em;
+     text-transform:uppercase; color:var(--faint); font-weight:700;
+     padding:7px 9px; border-bottom:1px solid var(--line); background:#f7f4ee; white-space:nowrap}
+  td{padding:9px; border-bottom:1px solid var(--line2); font-size:13px; vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.id{white-space:nowrap; width:1%}
+  td.el{font-weight:600; color:#000; min-width:150px}
+  td.what{color:#39344a}
+  td.where{font-family:var(--mono); font-size:10.5px; color:var(--faint); white-space:nowrap}
+  td.free{font-size:11.5px; white-space:nowrap}
+  .f-free{color:var(--free)}
+  .f-fixed{color:var(--fixed)}
+  .f-struct{color:var(--struct)}
+  .sub td.el{font-weight:500; color:var(--dim); font-size:12.5px; padding-left:20px}
+  .sub td.what{font-size:12.5px; color:var(--dim)}
+  tr.grp td{background:#f7f4ee; font-weight:700; font-size:12.5px; color:var(--accent)}
+
+  .matrix{width:100%; border-collapse:collapse; font-size:12px}
+  .matrix th,.matrix td{padding:6px; text-align:center; border-bottom:1px solid var(--line2)}
+  .matrix th:first-child,.matrix td:first-child{text-align:left}
+  .matrix th{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; color:var(--faint); text-transform:uppercase}
+  .matrix td:first-child{font-family:var(--mono); font-size:11px}
+  .on{color:var(--accent); font-weight:700}
+  .spot{color:#000; font-weight:700}
+  .dim{color:#a9a3b6}
+  .locked{color:var(--fixed); font-weight:700}
+  .mx{color:#c9c4d2}
+
+  .callout{margin:16px 0; padding:14px 16px; border-radius:6px; font-size:13.5px;
+           background:#f0f6f5; border:1px solid #cfe6e1; border-left:3px solid var(--free); color:#243b38}
+  .callout b{color:var(--free)}
+  .callout.warn{background:#fdf4ec; border-color:#f0ddc9; border-left-color:var(--fixed); color:#402f20}
+  .callout.warn b{color:var(--fixed)}
+  .callout.gap{background:#fbeef1; border-color:#f0d4dc; border-left-color:var(--struct); color:#40202a}
+  .callout.gap b{color:var(--struct)}
+
+  ul.slots{margin:10px 0 0; padding-left:0; list-style:none}
+  ul.slots li{padding:8px 0; border-bottom:1px solid var(--line2); font-size:13.5px; color:#2e2a3d}
+  ul.slots li:last-child{border-bottom:none}
+  ul.slots b{color:#000}
+  ul.slots code{font-family:var(--mono); font-size:11.5px; color:var(--dim)}
+
+  footer.end{margin-top:56px; padding-top:18px; border-top:1px solid var(--line); font-size:12px; color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="kicker">miden-envelope &middot; interface inventory</div>
+  <h1>Every element, with an ID.</h1>
+  <p class="lede">This is the full contents of the preview, broken down by where each piece sits.
+  Nothing here is left unnamed, so you can point at an ID and say <em>that one</em>.</p>
+  <p class="lede small">The preview is a generic build. This page exists so it can be replaced, piece by piece,
+  with a design that isn't.</p>
+</header>
+
+<div class="plain">
+  <h2>What the thing depicts, in plain words</h2>
+  <p>Someone pays you. On a public network the payment leaves a trace even when the amount is hidden.
+  Miden seals the <b>inside</b> of a private note &mdash; the money, the asset, who it's for. But the note
+  still has to be put <b>somewhere the network can find it</b>, so it gets a <b>label</b> on the outside.
+  That label is public, and by default it is worked out from the receiver's account number.</p>
+  <p>Account numbers don't change. So every payment to the same person gets the same label. Anyone
+  watching can collect the labels and say: <em>these six payments belong to one person.</em> They still
+  don't know who. But they know it's a <b>who</b> &mdash; and that is already a history.</p>
+  <p>This shows a way to break that up. Each payment gets a different label, picked at random from a
+  small pool of labels that all lead back to the same receiver. The receiver listens on the whole pool,
+  so it still finds its money. A watcher sees six different labels and has nothing to group
+  together. <b>The dial is how big the pool is</b> &mdash; a wide pool means more labels to hide among
+  but more work for the receiver; a narrow pool is the reverse.</p>
+  <p>Then it shows the two ways that is weaker than it sounds. An observer holding the <b>public list of
+  account numbers</b> doesn't need labels to repeat &mdash; it works backwards from any label to a
+  shortlist of a few possible accounts, and guesses. And an observer who <b>already knows your account
+  number</b> isn't guessing at all: it registers exactly your pool and catches every payment, whatever
+  the dial says.</p>
+  <span class="turn">So it isn't about being invisible. It's about being one face in a crowd &mdash; and how big the crowd really is.</span>
+</div>
+
+<div class="scheme">
+  <div class="card">
+    <h3>How the IDs work</h3>
+    <p><code class="uid">CAST-02.e</code> &mdash; region, then number, then a part. <b>CAST</b> is where it
+    lives, <b>02</b> is which element, <b>.e</b> is which piece of it. Parts are lettered the same way
+    across repeating elements, so <code class="uid">CAST-01.e</code> and <code class="uid">CAST-03.e</code>
+    are the same slot on different characters.</p>
+  </div>
+  <div class="card">
+    <h3>Freedom column</h3>
+    <p><span class="f-free">free</span> &mdash; yours entirely, restyle or replace.
+    <span class="f-fixed">content-bound</span> &mdash; the shape is yours, the value is data and cannot change.
+    <span class="f-struct">structural</span> &mdash; cannot be removed or merged, because it carries the argument.</p>
+  </div>
+  <div class="card">
+    <h3>Appears column</h3>
+    <p><code class="uid n">b1–b6</code> meaning <em>beat 1 through beat 6</em>. The page is scrolled, not
+    clicked: each beat is a full screen of scrolling text and the scene above stays put.</p>
+  </div>
+</div>
+
+<nav class="regions">
+  <a href="#scene">SCENE</a>
+  <a href="#cast">CAST</a>
+  <a href="#lane">LANE</a>
+  <a href="#list">LIST</a>
+  <a href="#block">BLOCK</a>
+  <a href="#dial">DIAL</a>
+  <a href="#read">READ</a>
+  <a href="#beat">BEAT</a>
+  <a href="#note">NOTE</a>
+  <a href="#data">DATA</a>
+  <a href="#state">STATE</a>
+  <a href="#open">OPEN</a>
+  <a href="#matrix">MATRIX</a>
+  <a href="#index">ALL</a>
+</nav>
+
+<!-- ================= SCENE ================= -->
+<section class="region" id="scene">
+  <div class="rhead"><h2>The frame</h2><span class="pfx">SCENE</span><span class="count">5 IDs</span></div>
+  <p class="rdesc">The part that never scrolls away. Everything in CAST, LANE, LIST, BLOCK, DIAL and READ
+  lives inside this, and it stays pinned at the top of the window while the BEAT cards slide up over it.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">SCENE-01</code></td><td class="el">Page title</td>
+        <td class="what">"Three Watchers". The name of the piece.</td><td class="where">always</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">SCENE-02</code></td><td class="el">Honesty badge</td>
+        <td class="what">A standing note that this is a preview and is connected to nothing.</td><td class="where">always</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">SCENE-03</code></td><td class="el">Beat marker</td>
+        <td class="what">"beat 3 · the dial". Tells you where in the scroll you are, and doubles as the
+        title of the current beat.</td><td class="where">always</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">SCENE-04</code></td><td class="el">Pinned surface</td>
+        <td class="what">The backdrop panel itself: backing colour, bottom edge, the blur behind it. It is the
+        thing that is <em>stuck</em> while the page scrolls.</td><td class="where">always</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">SCENE-05</code></td><td class="el">Background wash</td>
+        <td class="what">Three soft colour glows behind everything, one per character. Pure atmosphere.</td>
+        <td class="where">always</td><td class="free f-free">free</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= CAST ================= -->
+<section class="region" id="cast">
+  <div class="rhead"><h2>The three characters</h2><span class="pfx">CAST</span><span class="count">3 panels + 6 parts = 18 IDs</span></div>
+  <p class="rdesc">One panel per observer. They are identical in structure &mdash; only the face, the name,
+  the colour and what the metric measures differ &mdash; so every part letter is reusable. A designer can
+  replace the whole face without touching anything else.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr class="grp"><td colspan="5">CAST-01 &mdash; The Watcher on the wire &middot; orange &middot; sits on the network and sees only labels</td></tr>
+      <tr><td class="id"><code class="uid">CAST-01.a</code></td><td class="el">Panel</td>
+        <td class="what">The whole card. Owns the dim / spotlit border states.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-01.b</code></td><td class="el">Face</td>
+        <td class="what">The drawing. Six expressions, see STATE-03.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-01.c</code></td><td class="el">Name</td>
+        <td class="what">"The Watcher on the wire".</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-01.d</code></td><td class="el">Role line</td>
+        <td class="what">One sentence saying what this observer can and cannot do. Disappears on short screens.</td>
+        <td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-01.e</code></td><td class="el">Speech line</td>
+        <td class="what">One sentence in the character's own voice, keyed to the expression it is currently
+        wearing. This is the single most important text on the panel.</td><td class="where">b2–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-01.f</code></td><td class="el">Metric chip</td>
+        <td class="what">A small pill showing the one number that face is reacting to: <em>link rate 0%</em>.</td>
+        <td class="where">b2–b6</td><td class="free f-fixed">content-bound</td></tr>
+
+      <tr class="grp"><td colspan="5">CAST-02 &mdash; The Librarian &middot; teal &middot; holds the public directory of account numbers</td></tr>
+      <tr><td class="id"><code class="uid">CAST-02.a</code></td><td class="el">Panel</td>
+        <td class="what">Same card. Wakes up in beat four.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-02.b</code></td><td class="el">Face</td>
+        <td class="what">Never wears the defeated expression. That omission is the point &mdash; see STATE-03.</td>
+        <td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-02.c</code></td><td class="el">Name</td>
+        <td class="what">"The Librarian".</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-02.d</code></td><td class="el">Role line</td>
+        <td class="what">"holds the public directory of every account number."</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-02.e</code></td><td class="el">Speech line</td>
+        <td class="what">Keyed to how long the shortlist currently is, not to the population rate.</td>
+        <td class="where">b4–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-02.f</code></td><td class="el">Metric chip</td>
+        <td class="what"><em>shortlist 3 names</em>.</td><td class="where">b4–b6</td><td class="free f-fixed">content-bound</td></tr>
+
+      <tr class="grp"><td colspan="5">CAST-03 &mdash; The One Who Knows You &middot; pink &middot; already has your account number on a card</td></tr>
+      <tr><td class="id"><code class="uid">CAST-03.a</code></td><td class="el">Panel</td>
+        <td class="what">Same card. Wakes up only in the last beat, and is the only one still lit at the end.</td>
+        <td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-03.b</code></td><td class="el">Face</td>
+        <td class="what">Has exactly <b>one</b> expression for the entire page. It never changes. Nothing in the
+        code ever reassigns it.</td><td class="where">b1–b6</td><td class="free f-struct">structural</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-03.c</code></td><td class="el">Name</td>
+        <td class="what">"The One Who Knows You".</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-03.d</code></td><td class="el">Role line</td>
+        <td class="what">"already has your account number on a card."</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-03.e</code></td><td class="el">Speech line</td>
+        <td class="what">Never changes either. Same sentence at every dial position.</td><td class="where">b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">CAST-03.f</code></td><td class="el">Metric chip</td>
+        <td class="what"><em>caught 5 / 5</em> &mdash; and it is always every one of them, at every dial setting.</td>
+        <td class="where">b6</td><td class="free f-fixed">content-bound</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn"><b>Do not "improve" CAST-03.b.</b> Everything else on the page is meant to be
+  redesigned. The third face not moving is the argument. If it flinches once, the last beat says nothing.</div>
+</section>
+
+<!-- ================= LANE ================= -->
+<section class="region" id="lane">
+  <div class="rhead"><h2>The stream of payments</h2><span class="pfx">LANE</span><span class="count">7 elements + 5 parts = 12 IDs</span></div>
+  <p class="rdesc">Payments cross left to right carrying their label on the front, then drop into piles.
+  The piles are the whole point: identical labels stack into one pile, different labels make separate
+  piles. This is the only place where "grouped" versus "not grouped" is <em>shown</em> rather than stated.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">LANE-01</code></td><td class="el">Panel</td>
+        <td class="what">The box holding the crossing payments and the piles.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LANE-02</code></td><td class="el">Panel title</td>
+        <td class="what">"six payments to you".</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LANE-03</code></td><td class="el">Track</td>
+        <td class="what">The dotted line the envelopes travel along.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LANE-04</code></td><td class="el">Start caption</td>
+        <td class="what">"sender" &mdash; which end of the track is which.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LANE-05</code></td><td class="el">End caption</td>
+        <td class="what">"you".</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LANE-06</code></td><td class="el">Envelope &mdash; <b>one payment</b></td>
+        <td class="what">The moving piece. Repeats; several can be in flight at once.</td><td class="where">b1–b6</td><td class="free f-struct">structural</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LANE-06.a</code></td><td class="el">Body</td>
+        <td class="what">The rectangle. Turns pink when the third watcher has caught this one.</td>
+        <td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LANE-06.b</code></td><td class="el">Flap</td>
+        <td class="what">The V on the front. Purely what makes it read as an envelope.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LANE-06.c</code></td><td class="el">Label chip</td>
+        <td class="what">The five hex digits on the front &mdash; <b>the only readable thing on the payment</b>.
+        This is the tag. It is the centre of the whole piece.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">LANE-07</code></td><td class="el">Pile</td>
+        <td class="what">A stack of landed payments that shared a label. One pile per distinct label.</td>
+        <td class="where">b1–b6</td><td class="free f-struct">structural</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LANE-07.a</code></td><td class="el">Pile label</td>
+        <td class="what">The shared label printed under the stack.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LANE-07.b</code></td><td class="el">Pile item</td>
+        <td class="what">One landed payment. Stack height = how many shared that label.</td>
+        <td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+    </tbody>
+  </table>
+  <div class="callout"><b>The reading you must be able to get in one glance:</b> at legacy there is
+  <b>one tall pile</b>; at k=7 there are <b>six piles of one</b>. If a redesign makes that harder to see,
+  the design has lost the argument.</div>
+</section>
+
+<!-- ================= LIST ================= -->
+<section class="region" id="list">
+  <div class="rhead"><h2>The Librarian's shortlist</h2><span class="pfx">LIST</span><span class="count">6 elements + 2 parts = 8 IDs</span></div>
+  <p class="rdesc">Appears in beat four. One row per account the Librarian thinks could have produced the
+  label it is looking at. It replaces as each new payment lands, so the number of rows is the point: three
+  rows means the Librarian is guessing between three names.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">LIST-01</code></td><td class="el">Panel</td>
+        <td class="what">The box. Slides in when the beat changes and stays for the rest of the page.</td>
+        <td class="where">b4–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LIST-02</code></td><td class="el">Panel title</td>
+        <td class="what">"the librarian's shortlist".</td><td class="where">b4–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LIST-03</code></td><td class="el">Candidate row</td>
+        <td class="what">One possible account. Repeats up to nine times, then collapses into LIST-05.</td>
+        <td class="where">b4–b6</td><td class="free f-struct">structural</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LIST-03.a</code></td><td class="el">Account id</td>
+        <td class="what">The first ten characters of an account number, truncated with an ellipsis.</td>
+        <td class="where">b4–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">LIST-03.b</code></td><td class="el">Verdict</td>
+        <td class="what">"you" or "maybe" &mdash; whether this row is actually the right answer.</td>
+        <td class="where">b4–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">LIST-04</code></td><td class="el">Your row</td>
+        <td class="what">The candidate row that happens to be you, highlighted. The whole demonstration is
+        "how many other rows are there around it".</td><td class="where">b4–b6</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">LIST-05</code></td><td class="el">Overflow row</td>
+        <td class="what">"… and 14 more". Shown only when the shortlist is too long to list.</td>
+        <td class="where">b4–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">LIST-06</code></td><td class="el">Empty state</td>
+        <td class="what">"no account in the directory matches". In practice never reached, but it exists
+        rather than the panel silently going blank.</td><td class="where">b4–b6</td><td class="free f-free">free</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= BLOCK ================= -->
+<section class="region" id="block">
+  <div class="rhead"><h2>The block the label named</h2><span class="pfx">BLOCK</span><span class="count">7 IDs</span></div>
+  <p class="rdesc">Appears in beat five. Every account in the directory as a dot, inside a box that is the
+  block its label belongs to. As the dial widens, dots leave the box. This is the theoretical ceiling, drawn.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">BLOCK-01</code></td><td class="el">Panel</td>
+        <td class="what">The box holding it all.</td><td class="where">b5–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-02</code></td><td class="el">Panel title</td>
+        <td class="what">"the block the label named".</td><td class="where">b5–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-03</code></td><td class="el">Block outline</td>
+        <td class="what">The dashed border that <em>is</em> the block. Has two states: loose (many accounts
+        inside) and tight (one account inside), see STATE-08.</td><td class="where">b5–b6</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-04</code></td><td class="el">Block tag</td>
+        <td class="what">The label printed on the box's edge &mdash; <em>k = 7&nbsp;&nbsp;1000111…</em>.
+        Names the group the label belongs to.</td><td class="where">b5–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-05</code></td><td class="el">Member dot</td>
+        <td class="what">One account in the directory. 128 of them. Leaves the box when the block narrows.</td>
+        <td class="where">b5–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-06</code></td><td class="el">Your dot</td>
+        <td class="what">The one that is you, gold. Never leaves the box, at any dial setting.</td>
+        <td class="where">b5–b6</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">BLOCK-07</code></td><td class="el">Note</td>
+        <td class="what">"3 of the 128 accounts in the directory share your block at this width. The block
+        holds 128 labels, and your note is always inside it." Reads as a sentence, updates live.</td>
+        <td class="where">b5–b6</td><td class="free f-fixed">content-bound</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= DIAL ================= -->
+<section class="region" id="dial">
+  <div class="rhead"><h2>The dial</h2><span class="pfx">DIAL</span><span class="count">9 IDs</span></div>
+  <p class="rdesc">The only control on the page. Nine positions: <em>legacy</em>, then pool widths 7
+  through 14. Locked for the first two beats, then unlocked for the rest. Everything else on screen is a
+  consequence of where this is pointing.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">DIAL-01</code></td><td class="el">Dial face</td>
+        <td class="what">The circular body the pointer sits on.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-02</code></td><td class="el">Swept arc</td>
+        <td class="what">The gold arc from the leftmost position to where the dial currently is. Shows how
+        far you have turned it, not what the value is.</td><td class="where">b3–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-03</code></td><td class="el">Pointer</td>
+        <td class="what">The needle. Rotates between −132° and +132°.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-04</code></td><td class="el">Centre value</td>
+        <td class="what">"LEG" or "7" … "14". The current position, in big type, in the middle of the dial.</td>
+        <td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-05</code></td><td class="el">Centre sublabel</td>
+        <td class="what">"legacy", "k = 7", and so on &mdash; the same value spelled out.</td>
+        <td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-06</code></td><td class="el">Hint</td>
+        <td class="what">The instruction beside the dial. Different sentence when locked, unlocked, and per
+        beat &mdash; it is how the page tells you what to do without a tutorial.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-07</code></td><td class="el">Tick row</td>
+        <td class="what">Nine small buttons under the hint &mdash; the same control for anyone who would
+        rather click than drag, and it also shows all nine positions at once.</td><td class="where">b3–b6</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-08</code></td><td class="el">Tick button</td>
+        <td class="what">One position. Has a current (highlighted) state and a disabled state when locked.</td>
+        <td class="where">b3–b6</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">DIAL-09</code></td><td class="el">Refusal shake</td>
+        <td class="what">The little side-to-side jerk when you try to drag it while locked. Motion, not a mark.</td>
+        <td class="where">b1–b2</td><td class="free f-free">free</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn"><b>Nine positions is a design decision, not a fact.</b> The underlying thing is a
+  pool width from 7 to 14. If your design wants a continuous fader, five stops, or two extremes only,
+  that is legitimate &mdash; but the page then loses the ability to show <em>where</em> the shortlist
+  collapses, which is the most interesting part of the dial.</div>
+</section>
+
+<!-- ================= READ ================= -->
+<section class="region" id="read">
+  <div class="rhead"><h2>The four numbers</h2><span class="pfx">READ</span><span class="count">5 IDs</span></div>
+  <p class="rdesc">Always visible. Each is one observer's power, as a number. Big figure is this crowd;
+  small line underneath is what was actually measured on 128 real account ids &mdash; the two are shown
+  together on purpose, so nobody can mistake the demo's crowd for the real result.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">READ-01</code></td><td class="el">Link rate</td>
+        <td class="what">Of the payments crossing, how many the Watcher can tie to at least one other.
+        100% at legacy, 0% at the wide end.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">READ-02</code></td><td class="el">Attribution</td>
+        <td class="what">Of 128 accounts, how many the Librarian can name outright at this width. Rises as
+        the dial widens.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">READ-03</code></td><td class="el">Candidate set</td>
+        <td class="what">How many names are on your shortlist right now.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">READ-04</code></td><td class="el">Targeted</td>
+        <td class="what">The third observer's catch count. Stays at 36/36 while everything either side of it
+        moves.</td><td class="where">b1–b6</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">READ-05</code></td><td class="el">Legend</td>
+        <td class="what">"big numbers = this crowd · small lines = measured, Stage 6, on 128 real account
+        ids". Explains the two sizes.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+    </tbody>
+  </table>
+  <p class="rdesc" style="margin-top:14px">Each of READ-01…READ-04 has the same three parts:
+  <code class="uid">.a</code> label, <code class="uid">.b</code> value, <code class="uid">.c</code> measured line.</p>
+</section>
+
+<!-- ================= BEAT ================= -->
+<section class="region" id="beat">
+  <div class="rhead"><h2>The six cards</h2><span class="pfx">BEAT</span><span class="count">6 cards + 4 parts = 30 IDs</span></div>
+  <p class="rdesc">The scrolling text. Each card is a full screen, and whichever one covers most of the
+  window decides what the whole page above it is doing. This is the only place words are allowed to be
+  long.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr class="grp"><td colspan="5">Every card has the same four parts &mdash; <code class="uid">.a</code> eyebrow, <code class="uid">.b</code> heading, <code class="uid">.c</code> body, <code class="uid">.d</code> footer</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-01</code></td><td class="el">“The envelope is public.”</td>
+        <td class="what">Sets up the premise: the inside is sealed, the outside label is not.</td><td class="where">b1</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-02</code></td><td class="el">“Every payment to you looks the same.”</td>
+        <td class="what">Six payments, one identical label. The Watcher cannot name you but can group you.</td><td class="where">b2</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-03</code></td><td class="el">“The dial.”</td>
+        <td class="what">Introduces blinding and the pool width, and unlocks the control.</td><td class="where">b3</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-04</code></td><td class="el">“But the Librarian has a directory.”</td>
+        <td class="what">The first honest limitation: labels not repeating doesn't stop a shortlist.</td><td class="where">b4</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-05</code></td><td class="el">“A label names a group, not a person.”</td>
+        <td class="what">The ceiling: blinding hides the label, not the block.</td><td class="where">b5</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">BEAT-06</code></td><td class="el">“The third face never moved.”</td>
+        <td class="what">The second limitation, and the end. Deliberately does not close on a triumph.</td><td class="where">b6</td><td class="free f-struct">structural</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">BEAT-0n.a</code></td><td class="el">Eyebrow</td>
+        <td class="what">"beat one", "beat two" … Small, above the heading.</td><td class="where">b1–b6</td><td class="free f-free">free</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">BEAT-0n.b</code></td><td class="el">Heading</td>
+        <td class="what">The one sentence the card is making.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">BEAT-0n.c</code></td><td class="el">Body</td>
+        <td class="what">Two or three short paragraphs. Contains the technical words with their plain gloss.</td>
+        <td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+      <tr class="sub"><td class="id"><code class="uid">BEAT-0n.d</code></td><td class="el">Footer</td>
+        <td class="what">The instruction or the punchline, set apart above a rule &mdash; "Drag the dial.",
+        "Its pile is one pile." This is the line people actually act on.</td><td class="where">b1–b6</td><td class="free f-fixed">content-bound</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= NOTE ================= -->
+<section class="region" id="note">
+  <div class="rhead"><h2>Footnotes</h2><span class="pfx">NOTE</span><span class="count">5 IDs</span></div>
+  <p class="rdesc">After the last card. Says what is real, what is not, and how much a crowd this size can
+  vary. Not decoration &mdash; the page would be overselling without it.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Element</th><th>What it is</th><th>Appears</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">NOTE-01</code></td><td class="el">Box</td>
+        <td class="what">The container for everything below.</td><td class="where">end</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">NOTE-02</code></td><td class="el">What is real</td>
+        <td class="what">The account number, the label arithmetic, the seven structural bits &mdash; all taken
+        from real runs, not invented.</td><td class="where">end</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">NOTE-03</code></td><td class="el">What is stand-in</td>
+        <td class="what">The other 127 accounts are generated. Says so, and says why they still behave
+        like real ones.</td><td class="where">end</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">NOTE-04</code></td><td class="el">The spread</td>
+        <td class="what">A crowd of 128 varies by ±4.8 points. Any single directory is a sample.</td>
+        <td class="where">end</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">NOTE-05</code></td><td class="el">Measured table</td>
+        <td class="what">Seven rows of width, link rate, attribution, block size, plus the targeted-observer
+        control. <code class="uid">.a</code> header, <code class="uid">.b</code> row, <code class="uid">.c</code> measured cell.</td>
+        <td class="where">end</td><td class="free f-fixed">content-bound</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= DATA ================= -->
+<section class="region" id="data">
+  <div class="rhead"><h2>The values that flow</h2><span class="pfx">DATA</span><span class="count">12 values</span></div>
+  <p class="rdesc">Not drawn, but they are what every panel is showing. A designer needs these named too,
+  because the <em>shape</em> and <em>range</em> of each value constrains how much room its element needs.
+  A percentage needs three characters; a 120-bit account number needs truncation.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Value</th><th>What it is / its range</th><th>Drives</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">DATA-01</code></td><td class="el">Your account id</td>
+        <td class="what">Fixed. 30 hex characters. <code class="n">0x8e1b…bf1ec</code>. Never changes anywhere on the page.</td>
+        <td class="where">CAST-03, LANE-06.c, BLOCK-06</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-02</code></td><td class="el">The directory</td>
+        <td class="what">128 account ids. The crowd everyone is hiding in or searching.</td>
+        <td class="where">LIST, BLOCK, READ-02</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-03</code></td><td class="el">Label (tag)</td>
+        <td class="what">Five hex digits, per payment. Identical at legacy, all different at k=7.</td>
+        <td class="where">LANE-06.c, LANE-07.a</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-04</code></td><td class="el">Pool width <i>k</i></td>
+        <td class="what">7 to 14, or <em>legacy</em>. The one thing you control.</td>
+        <td class="where">DIAL, everything</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">DATA-05</code></td><td class="el">Link rate</td>
+        <td class="what">0–100%. Watcher's power.</td><td class="where">READ-01, CAST-01.f</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-06</code></td><td class="el">Attribution rate</td>
+        <td class="what">0–100%. Librarian's power across the whole crowd.</td><td class="where">READ-02</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-07</code></td><td class="el">Candidate set size</td>
+        <td class="what">1–128. How many names are on your shortlist.</td><td class="where">READ-03, LIST, CAST-02.f</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-08</code></td><td class="el">Block population</td>
+        <td class="what">1–128. Accounts sharing your block at the current width.</td><td class="where">BLOCK-07, BLOCK-03</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-09</code></td><td class="el">Caught counter</td>
+        <td class="what">n / n &mdash; always equal. The third observer's tally.</td><td class="where">CAST-03.f, READ-04</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-10</code></td><td class="el">Mood vector</td>
+        <td class="what">Four numbers: brow −1…1, eye 0…1, mouth −1…1, gaze −1…1. What a face is actually drawn from.</td>
+        <td class="where">CAST-0n.b</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">DATA-11</code></td><td class="el">Beat index</td>
+        <td class="what">1–6. Which card is currently in charge.</td><td class="where">SCENE-03, everything</td><td class="free f-fixed">content-bound</td></tr>
+      <tr><td class="id"><code class="uid">DATA-12</code></td><td class="el">Pile grouping</td>
+        <td class="what">Payments bucketed by identical label. One bucket at legacy, six at k=7.</td>
+        <td class="where">LANE-07</td><td class="free f-struct">structural</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= STATE ================= -->
+<section class="region" id="state">
+  <div class="rhead"><h2>Shared states</h2><span class="pfx">STATE</span><span class="count">10 states</span></div>
+  <p class="rdesc">A designer needs the states as much as the shapes. These repeat across elements, so
+  they are defined once and referenced from the tables above.</p>
+  <table>
+    <thead><tr><th>ID</th><th>State</th><th>What changes visually</th><th>Used by</th><th>Freedom</th></tr></thead>
+    <tbody class="alt">
+      <tr><td class="id"><code class="uid">STATE-01</code></td><td class="el">Asleep / awake</td>
+        <td class="what">Dimmed to 42% and desaturated until the beat that introduces that character. Then
+        full strength and it never dims again.</td><td class="where">CAST-0n.a</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">STATE-02</code></td><td class="el">Spotlit</td>
+        <td class="what">A coloured border and glow, in that character's own colour. Marks who the current
+        beat is about. Different from awake: a character can be awake and not spotlit.</td>
+        <td class="where">CAST-0n.a</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-03</code></td><td class="el">The six expressions</td>
+        <td class="what"><b>gleeful</b> (winning), <b>content</b> (mild), <b>thoughtful</b> (concentrating),
+        <b>puzzled</b> (losing track), <b>defeated</b> (nothing left), <b>serene</b> (the third face only).</td>
+        <td class="where">CAST-01.b, CAST-02.b, CAST-03.b</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-04</code></td><td class="el">Dial: locked / unlocked / dragging</td>
+        <td class="what">Locked is faded, refuses pointer input, and signals the refusal. Unlocked is full strength.
+        Dragging tracks the finger; releasing settles to the nearest stop.</td><td class="where">DIAL-01–08</td><td class="free f-struct">structural</td></tr>
+      <tr><td class="id"><code class="uid">STATE-05</code></td><td class="el">Panel shown / hidden</td>
+        <td class="what">Absent until its beat, then present at full strength.</td>
+        <td class="where">LIST-01, BLOCK-01</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-06</code></td><td class="el">Envelope: in flight / landed / captured</td>
+        <td class="what">In flight: on the track, in no pile. Landed: becomes a pile item. Captured it turns pink
+        &mdash; only in the last beat, when the third observer is awake.</td><td class="where">LANE-06</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-07</code></td><td class="el">Dot: in block / left block / you</td>
+        <td class="what">In block: solid. Left block: faded and small. You: gold, always in block.</td>
+        <td class="where">BLOCK-05, BLOCK-06</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-08</code></td><td class="el">Block: loose / tight</td>
+        <td class="what">Dashed border while many accounts share it; solid and pink when only you are left.
+        The visual signal that the crowd has emptied out.</td><td class="where">BLOCK-03</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-09</code></td><td class="el">Row: you / maybe</td>
+        <td class="what">Your row is gold with a highlighted border; the rest are grey.</td>
+        <td class="where">LIST-03, LIST-04</td><td class="free f-free">free</td></tr>
+      <tr><td class="id"><code class="uid">STATE-10</code></td><td class="el">Card: current / offscreen</td>
+        <td class="what">No visual change on the card itself &mdash; the current one simply occupies the
+        window. Whether it dims or stays put is open.</td><td class="where">BEAT-0n</td><td class="free f-free">free</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= MATRIX ================= -->
+<section class="region" id="matrix" style="scroll-margin-top:56px">
+  <div class="rhead"><h2>What is on screen in which beat</h2><span class="pfx">MATRIX</span></div>
+  <p class="rdesc">Read across for one region, down for one beat. <span class="spot">●</span> awake and
+  spotlit, <span class="on">○</span> awake, <span class="dim">·</span> asleep, <span class="mx">–</span>
+  not present, <span class="locked">L</span> present but locked.</p>
+  <table class="matrix">
+    <thead><tr><th>Region</th><th>b1</th><th>b2</th><th>b3</th><th>b4</th><th>b5</th><th>b6</th></tr></thead>
+    <tbody>
+      <tr><td>SCENE-01…05</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>CAST-01 Watcher</td><td class="dim">·</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td><td class="on">○</td><td class="spot">●</td></tr>
+      <tr><td>CAST-02 Librarian</td><td class="dim">·</td><td class="dim">·</td><td class="dim">·</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td></tr>
+      <tr><td>CAST-03 Third</td><td class="dim">·</td><td class="dim">·</td><td class="dim">·</td><td class="dim">·</td><td class="dim">·</td><td class="spot">●</td></tr>
+      <tr><td>LANE-01…07</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>LIST-01…06</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="on">○</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>BLOCK-01…07</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>DIAL-01…09</td><td class="locked">L</td><td class="locked">L</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>READ-01…05</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td><td class="on">○</td></tr>
+      <tr><td>BEAT-0n</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td><td class="spot">●</td></tr>
+      <tr><td>NOTE-01…05</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="mx">–</td><td class="mx">after</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= OPEN ================= -->
+<section class="region" id="open">
+  <div class="rhead"><h2>What your design has to decide</h2><span class="pfx">OPEN</span></div>
+  <p class="rdesc">Everything above is a slot. These are the choices that sit on top of them, and they are
+  yours. I've written my current answer next to each so you can overrule it rather than start from
+  nothing.</p>
+  <ul class="slots">
+    <li><b>What are the watchers, physically?</b> Currently three faces &mdash; a round blob, a square with
+    glasses, a fox. <code>CAST-0n.b</code> is a free slot: person, animal, machine, object, abstract
+    glyph. The only constraint is that <b>CAST-03.b must have exactly one expression</b>.</li>
+    <li><b>Is the whole thing one screen or a scroll?</b> Currently six full screens of scrolling. A
+    single-screen version would need the six cards as a side panel or a sequence you click through, and
+    would lose the slow reveal of BEAT-04 and BEAT-05.</li>
+    <li><b>Where does the dial live, and what is it?</b> Currently a knob bottom-left. It could be a lever,
+    a fader, a row of stops, or a physical object in the scene. Nine positions is my choice, not a law.</li>
+    <li><b>Is a payment an envelope?</b> Currently yes. It could be a parcel, a coin, a card, a light. The
+    only thing that must survive is that <b>something visible on the outside names the group</b>.</li>
+    <li><b>Three colours, one each?</b> Orange / teal / pink right now. The third's colour should be the
+    one that reads as <em>unbothered</em>, because it never changes.</li>
+    <li><b>How loud is the type?</b> The numbers are currently monospace so they read as measurements
+    rather than slogans. Your call.</li>
+    <li><b>Does the third character appear early?</b> Currently asleep and dimmed until beat six, then
+    spotlit. Showing it from the start, unmoving, is a legitimate and colder alternative.</li>
+    <li><b>Small screens?</b> Below about 1240px the card has to slide over the scene. If your design is
+    meant for a phone, the whole arrangement probably needs to become one card at a time.</li>
+  </ul>
+</section>
+
+<section class="region" id="index">
+  <div class="rhead"><h2>Flat index</h2><span class="pfx">ALL</span><span class="count">121 IDs</span></div>
+  <p class="rdesc">Every ID in one place, for pointing at things quickly.</p>
+  <p style="font-family:var(--mono); font-size:12px; line-height:2.1; color:var(--dim)">
+    <code class="uid">SCENE-01</code> <code class="uid">SCENE-02</code> <code class="uid">SCENE-03</code>
+    <code class="uid">SCENE-04</code> <code class="uid">SCENE-05</code><br>
+    <code class="uid">CAST-01.a</code> <code class="uid">CAST-01.b</code> <code class="uid">CAST-01.c</code>
+    <code class="uid">CAST-01.d</code> <code class="uid">CAST-01.e</code> <code class="uid">CAST-01.f</code><br>
+    <code class="uid">CAST-02.a</code> <code class="uid">CAST-02.b</code> <code class="uid">CAST-02.c</code>
+    <code class="uid">CAST-02.d</code> <code class="uid">CAST-02.e</code> <code class="uid">CAST-02.f</code><br>
+    <code class="uid">CAST-03.a</code> <code class="uid">CAST-03.b</code> <code class="uid">CAST-03.c</code>
+    <code class="uid">CAST-03.d</code> <code class="uid">CAST-03.e</code> <code class="uid">CAST-03.f</code><br>
+    <code class="uid">LANE-01</code> <code class="uid">LANE-02</code> <code class="uid">LANE-03</code>
+    <code class="uid">LANE-04</code> <code class="uid">LANE-05</code>
+    <code class="uid">LANE-06.a</code> <code class="uid">LANE-06.b</code> <code class="uid">LANE-06.c</code>
+    <code class="uid">LANE-07.a</code> <code class="uid">LANE-07.b</code><br>
+    <code class="uid">LIST-01</code> <code class="uid">LIST-02</code>
+    <code class="uid">LIST-03.a</code> <code class="uid">LIST-03.b</code>
+    <code class="uid">LIST-04</code> <code class="uid">LIST-05</code> <code class="uid">LIST-06</code><br>
+    <code class="uid">BLOCK-01</code> <code class="uid">BLOCK-02</code> <code class="uid">BLOCK-03</code>
+    <code class="uid">BLOCK-04</code> <code class="uid">BLOCK-05</code> <code class="uid">BLOCK-06</code>
+    <code class="uid">BLOCK-07</code><br>
+    <code class="uid">DIAL-01</code> <code class="uid">DIAL-02</code> <code class="uid">DIAL-03</code>
+    <code class="uid">DIAL-04</code> <code class="uid">DIAL-05</code> <code class="uid">DIAL-06</code>
+    <code class="uid">DIAL-07</code> <code class="uid">DIAL-08</code> <code class="uid">DIAL-09</code><br>
+    <code class="uid">READ-01</code> <code class="uid">READ-02</code> <code class="uid">READ-03</code>
+    <code class="uid">READ-04</code> <code class="uid">READ-05</code><br>
+    <code class="uid">BEAT-01</code> <code class="uid">BEAT-02</code> <code class="uid">BEAT-03</code>
+    <code class="uid">BEAT-04</code> <code class="uid">BEAT-05</code> <code class="uid">BEAT-06</code>
+    <code class="uid n">+ .a .b .c .d on each</code><br>
+    <code class="uid">NOTE-01</code> <code class="uid">NOTE-02</code> <code class="uid">NOTE-03</code>
+    <code class="uid">NOTE-04</code> <code class="uid">NOTE-05</code><br>
+    <code class="uid g">DATA-01</code> … <code class="uid g">DATA-12</code>
+    &nbsp; <code class="uid r">STATE-01</code> … <code class="uid r">STATE-10</code>
+  </p>
+</section>
+
+<footer class="end">
+  Built from <code class="uid n">preview.html</code>, which is the reference implementation of all of the
+  above. Say an ID and I change only that one thing. Nothing here is new design &mdash; it is the list of
+  slots your design has to fill.
+</footer>
+
+</div>
+</body>
+</html>

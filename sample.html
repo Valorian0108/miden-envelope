@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Single screen shell · RD-07 sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: oklch(97% 0.006 250);
+    --raised: oklch(99% 0.004 250);
+    --ink: oklch(19% 0.012 255);
+    --dim: oklch(42% 0.01 255);
+    --faint: oklch(58% 0.008 255);
+    --rule: oklch(80% 0.008 250);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --brass: oklch(72% 0.08 235);
+    --oxblood: oklch(45% 0.13 25);
+    --inset: clamp(1.25rem, 5.8vw, 6.5rem);
+    --track-label: 0.11em;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0; background:var(--paper); color:var(--ink);
+       font-family:"IBM Plex Sans", system-ui, sans-serif;
+       font-size:1.0625rem; line-height:1.65;
+       padding:clamp(2.5rem,6vw,5rem) var(--inset) 4rem}
+  .wrap{max-width:78rem; margin:0 auto}
+
+  .kicker{font-family:var(--mono); font-size:.8125rem; letter-spacing:var(--track-label);
+          text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+          margin:0 0 1rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+
+  h1{font-family:"Space Grotesk", sans-serif; font-weight:500; letter-spacing:-0.035em;
+     font-size:clamp(2.5rem,6vw,4.5rem); line-height:.98; margin:0 0 .5rem; max-width:22ch}
+  .deck{font-family:"Space Grotesk", sans-serif; font-weight:400; letter-spacing:-0.02em;
+        font-size:clamp(1.1rem,2.4vw,1.4rem); color:var(--dim); margin:0 0 3rem; max-width:56ch}
+
+  .panels{display:flex; gap:2rem; flex-wrap:wrap}
+  .panel{flex:1 1 22rem; min-width:20rem; border:1px solid var(--rule); background:var(--raised);
+         padding:1.4rem 1.5rem 1.6rem}
+  .panel.accent-one{border-top:3px solid var(--pumpkin)}
+  .panel.accent-two{border-top:3px solid var(--brass)}
+  .panel.accent-three{border-top:3px solid var(--oxblood)}
+
+  .panel .label{font-family:var(--mono); font-size:.75rem; letter-spacing:var(--track-label);
+                text-transform:uppercase; color:var(--faint); display:block; margin-bottom:.35rem}
+  .panel .name{font-family:"Space Grotesk", sans-serif; font-weight:500; letter-spacing:-0.02em;
+               font-size:1.5rem; line-height:1.1; margin:0 0 .75rem; color:var(--ink)}
+  .panel .name.accent-one{color:var(--pumpkin)}
+  .panel .name.accent-two{color:var(--brass)}
+  .panel .name.accent-three{color:var(--oxblood)}
+
+  .face{width:100%; height:9rem; border:1px solid var(--rule); position:relative;
+        margin:0 0 1rem; background:var(--paper); overflow:hidden}
+  .face svg{width:100%; height:100%; display:block}
+  .face .placeholder{fill:none; stroke:var(--ink); stroke-width:3; stroke-linecap:round;
+                     stroke-linejoin:round}
+  .face.accent-one .placeholder{stroke:var(--pumpkin)}
+  .face.accent-two .placeholder{stroke:var(--brass)}
+  .face.accent-three .placeholder{stroke:var(--oxblood)}
+  .face .geo{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+              text-transform:uppercase; fill:var(--faint); position:absolute; bottom:.5rem; left:.5rem}
+
+  .role{font-size:1rem; line-height:1.6; color:var(--dim); margin:0 0 1rem; max-width:20ch}
+  .chip{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+        text-transform:uppercase; color:var(--pumpkin); display:flex; align-items:center; gap:.5em}
+  .chip::before{content:""; width:.5em; height:.5em; background:currentColor; flex:0 0 auto; border-radius:50%}
+  .chip.accent-two, .chip.accent-two::before{color:var(--brass)}
+  .chip.accent-three, .chip.accent-three::before{color:var(--oxblood)}
+
+  footer{border-top:1px solid var(--rule); margin-top:3rem; padding-top:1.25rem;
+         font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; color:var(--faint);
+         line-height:1.8; max-width:56ch}
+  footer b{color:var(--ink)}
+
+  @media (max-width:52rem){
+    .panels{flex-direction:column}
+    .panel{min-width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">RD-07 · single screen · static</p>
+  <h1>Three watchers</h1>
+  <p class="deck">All three observers on one surface at the same time — no scroll, no counter,
+  nothing hidden behind “beat 3”. Hairline rules fence each panel; white space does the separating.</p>
+
+  <div class="panels">
+    <div class="panel accent-one">
+      <span class="label">Observer one</span>
+      <h2 class="name accent-one">Watcher</h2>
+      <div class="face accent-one">
+        <svg viewBox="0 0 200 180" preserveAspectRatio="xMidYMid slice">
+          <circle class="placeholder geo" cx="100" cy="70" r="52"/>
+          <path class="placeholder geo" d="M70 100 Q100 115 130 100"/>
+          <path class="placeholder geo" d="M82 55 Q100 75 118 55"/>
+          <path class="placeholder geo" d="M78 44 Q100 50 122 44"/>
+        </svg>
+        <text class="geo">placeholder · commissioned line drawing</text>
+      </div>
+      <p class="role">Reads the label on the outside and never opens the note.</p>
+      <p class="chip accent-one">sees three payments today</p>
+    </div>
+
+    <div class="panel accent-two">
+      <span class="label">Observer two</span>
+      <h2 class="name accent-two">Clerk</h2>
+      <div class="face accent-two">
+        <svg viewBox="0 0 200 180" preserveAspectRatio="xMidYMid slice">
+          <circle class="placeholder geo" cx="100" cy="70" r="52"/>
+          <path class="placeholder geo" d="M70 100 Q100 115 130 100"/>
+          <path class="placeholder geo" d="M82 62 Q100 70 118 62"/>
+          <path class="placeholder geo" d="M88 48 Q100 56 112 48"/>
+        </svg>
+        <text class="geo">placeholder · commissioned line drawing</text>
+      </div>
+      <p class="role">Counts how many tags share a block and names the ones that do.</p>
+      <p class="chip accent-two">holds the whole directory</p>
+    </div>
+
+    <div class="panel accent-three">
+      <span class="label">Observer three</span>
+      <h2 class="name accent-three">Bystander</h2>
+      <div class="face accent-three">
+        <svg viewBox="0 0 200 180" preserveAspectRatio="xMidYMid slice">
+          <circle class="placeholder geo" cx="100" cy="70" r="52"/>
+          <path class="placeholder geo" d="M70 100 Q100 115 130 100"/>
+          <path class="placeholder geo" d="M82 60 Q100 66 118 60"/>
+          <path class="placeholder geo" d="M84 50 Q100 54 116 50"/>
+        </svg>
+        <text class="geo">placeholder · commissioned line drawing</text>
+      </div>
+      <p class="role">Watches both panels and says nothing that changes either one.</p>
+      <p class="chip accent-three">sees everything, changes nothing</p>
+    </div>
+  </div>
+
+  <footer>
+    <b>NOTE-01 — honesty:</b> this is a client-side sketch. The faces are placeholder geometry;
+    the commissioned line drawings come after the art direction is agreed. Nothing here sends or
+    receives anything — no chain, no mock, no network.
+  </footer>
+
+</div>
+</body>
+</html>

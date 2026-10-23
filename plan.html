@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redesign plan — RD-01 to RD-35</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: oklch(97% 0.006 250);
+    --raised: oklch(99% 0.004 250);
+    --ink: oklch(19% 0.012 255);
+    --rule: oklch(80% 0.008 250);
+    --brass: oklch(72% 0.08 235);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --oxblood: oklch(45% 0.13 25);
+    --dim: oklch(48% 0.012 255);
+    --faint: oklch(62% 0.008 250);
+    --display: "Space Grotesk","IBM Plex Sans",system-ui,sans-serif;
+    --body: "IBM Plex Sans","Avenir Next",system-ui,sans-serif;
+    --mono: "IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --page: clamp(1.25rem, 5.8vw, 6.5rem);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.6}
+  .shell{max-width:78rem; margin:0 auto; padding:4rem var(--page) 6rem}
+
+  .kicker{font-family:var(--mono); font-size:.8125rem; letter-spacing:.11em; text-transform:uppercase;
+          display:inline-flex; align-items:center; gap:.65em; color:var(--ink); margin:0 0 1rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+  h1{font-family:var(--display); font-weight:700; font-size:clamp(2.4rem,7vw,5.6rem);
+     line-height:.94; letter-spacing:-.03em; margin:0 0 1.25rem; max-width:20ch}
+  .lede{font-size:1.125rem; line-height:1.6; max-width:60ch; margin:0 0 .75rem}
+  .note{font-size:.9375rem; color:var(--dim); max-width:66ch; margin:0}
+
+  .rule{border:0; border-top:1px solid var(--rule); margin:3rem 0 0}
+
+  section{padding:2.75rem 0 0}
+  .shead{display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+         border-top:1px solid var(--rule); padding-top:.6rem; margin-bottom:1.5rem}
+  .shead h2{font-family:var(--mono); font-size:.8125rem; font-weight:600; letter-spacing:.11em;
+            text-transform:uppercase; margin:0; display:inline-flex; align-items:center; gap:.65em}
+  .shead h2::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+  .shead .meta{font-family:var(--mono); font-size:.8125rem; letter-spacing:.11em; text-transform:uppercase; color:var(--dim)}
+
+  /* locked decisions */
+  .locked{display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); gap:0;
+          border-left:1px solid var(--rule)}
+  .lock{padding:0 0 0 1.1rem; border-right:1px solid var(--rule); }
+  .lock:last-child{border-right:0}
+  .lock .id{font-family:var(--mono); font-size:.8125rem; letter-spacing:.06em; color:var(--pumpkin); font-weight:600}
+  .lock p{margin:.35rem 0 0; font-size:.9375rem; line-height:1.5; color:var(--ink); padding-right:1rem}
+
+  /* open questions */
+  ol.asks{list-style:none; counter-reset:ask; margin:0; padding:0}
+  ol.asks li{counter-increment:ask; position:relative; padding:1rem 0 1rem 4.6rem;
+             border-bottom:1px solid var(--rule)}
+  ol.asks li:last-child{border-bottom:0}
+  ol.asks li::before{content:attr(data-rd); position:absolute; left:0; top:1.15rem;
+                     font-family:var(--mono); font-size:.8125rem; letter-spacing:.06em;
+                     color:var(--pumpkin); font-weight:600}
+  ol.asks b{font-weight:600}
+  ol.asks .mine{display:block; margin-top:.35rem; font-size:.9375rem; color:var(--dim)}
+  ol.asks .mine::before{content:"my answer: "; font-family:var(--mono); font-size:.75rem;
+                        letter-spacing:.09em; text-transform:uppercase; color:var(--brass)}
+
+  table{width:100%; border-collapse:collapse; font-size:.9375rem}
+  thead th{font-family:var(--mono); font-size:.6875rem; letter-spacing:.12em; text-transform:uppercase;
+           color:var(--faint); font-weight:500; text-align:left; padding:.5rem .75rem .5rem 0;
+           border-bottom:1px solid var(--ink); white-space:nowrap}
+  tbody td{padding:.7rem .75rem .7rem 0; border-bottom:1px solid var(--rule); vertical-align:top}
+  tbody tr:last-child td{border-bottom:1px solid var(--ink)}
+  td.id{font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; white-space:nowrap; width:1%}
+  td.step{font-weight:500; min-width:11rem}
+  thead th:nth-child(4){width:7.5rem}
+  td.touch{font-family:var(--mono); font-size:.75rem; color:var(--dim); white-space:nowrap}
+  td.when{font-size:.875rem; color:var(--dim); min-width:13rem}
+  .phase td{background:var(--raised); font-family:var(--mono); font-size:.6875rem; letter-spacing:.12em;
+            text-transform:uppercase; color:var(--dim); padding:.45rem .75rem .45rem 0}
+
+  .st{font-family:var(--mono); font-size:.6875rem; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap}
+  .st.set{color:var(--brass)}
+  .st.yours{color:var(--pumpkin); font-weight:600}
+  .st.open{color:var(--faint)}
+
+  a{color:inherit; text-decoration:underline; text-decoration-color:var(--brass);
+    text-decoration-thickness:1px; text-underline-offset:.18em}
+  a:hover{text-decoration-color:var(--pumpkin)}
+
+  /* palette strip */
+  .swatches{display:flex; flex-wrap:wrap; gap:0;
+            border:1px solid var(--rule); background:var(--raised); margin:0 0 1.5rem}
+  .sw{flex:1 1 9rem; padding:1rem .9rem 1.1rem; border-right:1px solid var(--rule)}
+  .sw:last-child{border-right:0}
+  .sw .chip{height:2.6rem; border:1px solid var(--rule); margin-bottom:.6rem}
+  .sw code{font-family:var(--mono); font-size:.6875rem; color:var(--dim); display:block; line-height:1.5}
+  .sw .nm{font-family:var(--mono); font-size:.6875rem; letter-spacing:.09em; text-transform:uppercase; font-weight:600}
+
+  footer{margin-top:4rem; border-top:1px solid var(--rule); padding-top:1.25rem;
+         font-family:var(--mono); font-size:.75rem; letter-spacing:.02em; color:var(--faint); line-height:1.8}
+
+  @media (max-width:60rem){ .sw{border-bottom:1px solid var(--rule)} }
+  @media (max-width:47.99rem){
+    .locked{grid-template-columns:1fr; border-left:0}
+    .lock{border-right:0; border-bottom:1px solid var(--rule); padding:1rem 0 1rem 0}
+    .lock:last-child{border-bottom:0}
+    tbody td.touch{display:none}
+    .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}
+    thead th.touch{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <p class="kicker">miden-envelope &middot; redesign plan</p>
+  <h1>Thirty-five steps, in order.</h1>
+  <p class="lede">Foundations first, then one element at a time. Every step has an ID so you can
+  reject it by name without stopping the rest.</p>
+  <p class="note">The 121 element IDs from the map are unchanged and still the thing being
+  redesigned. These are a second, parallel numbering: <b>RD</b> is a step, not an element.</p>
+
+  <!-- ===================================================== -->
+  <section>
+    <div class="shead"><h2>Already decided</h2><span class="meta">UI-001 to UI-007 &middot; logged</span></div>
+    <div class="locked">
+      <div class="lock"><span class="id">UI-001</span>
+        <p>Surface from your Voice Lab sheet: paper, hairline rules, micro-labels with a pumpkin
+        square, poster-scale display type. Palette read from the live stylesheet, not sampled.</p></div>
+      <div class="lock"><span class="id">UI-002</span>
+        <p>Each observer gets <b>one plain word</b>. Not a metaphor, not a crypto term. All three
+        current names fail.</p></div>
+      <div class="lock"><span class="id">UI-003</span>
+        <p>Faces are <b>drawn by an artist</b>, to an art direction we agree. No emoji, no icon glyphs.
+        The third one must have exactly one expression.</p></div>
+      <div class="lock"><span class="id">UI-004</span>
+        <p>Copy is <b>plain speech</b>. If a word needs looking up, the line is wrong.</p></div>
+      <div class="lock"><span class="id">UI-005</span>
+        <p>The honesty badge leaves the header. The statement moves to the footnote.</p></div>
+      <div class="lock"><span class="id">UI-006</span>
+        <p><b>Colour by role.</b> Three accents, one per observer — pumpkin, brass, oxblood — and no
+        fourth hue. The three background washes are deleted; the colour they were carrying moves onto
+        the spotlit panel's own border and face.</p></div>
+      <div class="lock"><span class="id">UI-007</span>
+        <p><b>Art direction.</b> One-colour line drawings: no shading, no gradients, no 3D. Stroke
+        heavier than an icon set. Faces cropped close and slightly off-centre, drawn from shared
+        geometry. The third observer has exactly one drawing, permanently.</p></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== -->
+  <section>
+    <div class="shead"><h2>What is still yours</h2><span class="meta">none &middot; all settled</span></div>
+    <p class="note">Every question that was yours has an answer now. Names (RD-14) and metric chips
+    (RD-17) settled 2026-10-23. If any of them turns out wrong in use, say the ID and what is wrong
+    and it gets reopened — nothing here is permanent until it survives being looked at.</p>
+  </section>
+
+  <!-- ===================================================== -->
+  <section>
+    <div class="shead"><h2>Palette</h2><span class="meta">RD-01 &middot; fixed &mdash; UI-006</span></div>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:oklch(97% 0.006 250)"></div>
+        <div class="nm">paper</div><code>#F2F5F9</code><code>the page</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(99% 0.004 250)"></div>
+        <div class="nm">raised</div><code>#FAFCFE</code><code>panels</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(19% 0.012 255)"></div>
+        <div class="nm">ink</div><code>#101419</code><code>all text</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(80% 0.008 250)"></div>
+        <div class="nm">rule</div><code>#BABEC3</code><code>hairlines</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(71.6% 0.191 47)"></div>
+        <div class="nm">pumpkin</div><code>#FF7518</code><code>accent one</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(72% 0.08 235)"></div>
+        <div class="nm">brass</div><code>#71ADD0</code><code>accent two</code></div>
+      <div class="sw"><div class="chip" style="background:oklch(45% 0.13 25)"></div>
+        <div class="nm">oxblood</div><code>#90302E</code><code>accent three</code></div>
+    </div>
+    <p class="note">Seven values, three of them chromatic. The layout carries three because it uses
+    each one for a different character and never two at once. A fourth chromatic value would break
+    that, so the palette stops here unless something is removed. <b>Settled:</b> one accent per
+    observer, nothing borrows another's, and the background washes are gone — the colour moves onto
+    whichever panel the current beat is about.</p>
+  </section>
+
+  <!-- ===================================================== -->
+  <section>
+    <div class="shead"><h2>The plan</h2><span class="meta">35 steps &middot; dependency order</span></div>
+    <table>
+      <thead><tr><th>ID</th><th>Step</th><th class="touch">Touches</th><th>State</th><th>Done when</th></tr></thead>
+      <tbody>
+
+        <tr class="phase"><td colspan="5">Phase 0 &mdash; foundations</td></tr>
+        <tr><td class="id">RD-01</td><td class="step">Palette</td><td class="touch">&mdash;</td>
+          <td class="st set">set</td><td class="when">One stylesheet holds all seven values as tokens. No hex anywhere else.</td></tr>
+        <tr><td class="id">RD-02</td><td class="step">Colour by role</td><td class="touch">CAST-0n, READ-05</td>
+          <td class="st set">set</td><td class="when">Each character owns one accent. Nothing borrows another's. (UI-006)</td></tr>
+        <tr><td class="id">RD-03</td><td class="step">Type stack</td><td class="touch">&mdash;</td>
+          <td class="st set">set</td><td class="when">A: Space Grotesk (display), IBM Plex Sans (reading), IBM Plex Mono (micro). Confirmed 2026-10-23; ramp next (RD-04).</td></tr>
+        <tr><td class="id">RD-04</td><td class="step">Type ramp</td><td class="touch">SCENE-01, BEAT-0n.b</td>
+          <td class="st set">set</td><td class="when">Six sizes defined against stack A: display clamp(2.5rem, 6vw, 4.5rem), deck clamp(1.25rem, 2.6vw, 1.75rem), body 1.0625rem, small 0.875rem, micro 0.8125rem + 0.11em tracking, numeral 1.5rem tabular.</td></tr>
+        <tr><td class="id">RD-05</td><td class="step">Grid and measure</td><td class="touch">&mdash;</td>
+          <td class="st set">set</td><td class="when">78rem container, page inset, and a 68ch measure for prose.</td></tr>
+        <tr><td class="id">RD-06</td><td class="step">Rule and marker grammar</td><td class="touch">&mdash;</td>
+          <td class="st set">set</td><td class="when">Every panel is delimited by rules. No shadow except one hover lift.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 1 &mdash; the shell</td></tr>
+        <tr><td class="id">RD-07</td><td class="step">The pinned surface</td><td class="touch">SCENE-04</td>
+          <td class="st set">set</td><td class="when">Single screen. All panels visible at once, rules fence each region, white space separates, no scroll state.</td></tr>
+        <tr><td class="id">RD-08</td><td class="step">Background</td><td class="touch">SCENE-05</td>
+          <td class="st set">set</td><td class="when">Glows deleted. Colour rotation moves onto the spotlit panel's border. Paper stays flat. (UI-006)</td></tr>
+        <tr><td class="id">RD-09</td><td class="step">Title</td><td class="touch">SCENE-01</td>
+          <td class="st set">set</td><td class="when">"Three Watchers" set in pumpkin at poster scale, flush left.</td></tr>
+        <tr><td class="id">RD-10</td><td class="step">Beat marker</td><td class="touch">SCENE-03</td>
+          <td class="st set">set</td><td class="when">Counter dropped. Single screen has no beat; each panel carries its own title instead.</td></tr>
+        <tr><td class="id">RD-11</td><td class="step">Disclaimer</td><td class="touch">SCENE-02 &rarr; NOTE-01</td>
+          <td class="st set">set</td><td class="when">No badge in the header. One sentence in the foot.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 2 &mdash; the three observers</td></tr>
+        <tr><td class="id">RD-12</td><td class="step">Panel frame</td><td class="touch">CAST-0n.a</td>
+          <td class="st set">set</td><td class="when">Top rule, name, measure, nothing else. Spotlit state kept.</td></tr>
+        <tr><td class="id">RD-13</td><td class="step">Art direction brief</td><td class="touch">CAST-0n.b</td>
+          <td class="st set">set</td><td class="when">Four answers written down: line medium, heavy stroke, close crop, drawn expression. (UI-007)</td></tr>
+        <tr><td class="id">RD-14</td><td class="step">Names</td><td class="touch">CAST-0n.c</td>
+          <td class="st set">set</td><td class="when">Watcher / Clerk / Bystander. One plain word each.</td></tr>
+        <tr><td class="id">RD-15</td><td class="step">Role lines</td><td class="touch">CAST-0n.d</td>
+          <td class="st set">set</td><td class="when">One sentence per character, no jargon, no "metadata".</td></tr>
+        <tr><td class="id">RD-16</td><td class="step">Speech lines</td><td class="touch">CAST-0n.e</td>
+          <td class="st set">set</td><td class="when">Each line keyed to an expression and readable out loud.</td></tr>
+        <tr><td class="id">RD-17</td><td class="step">Metric chips</td><td class="touch">CAST-0n.f</td>
+          <td class="st set">set</td><td class="when">One sentence fragment per character: "three lists, six parcels", "adds the six codes", "turns a code into accounts".</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 3 &mdash; the payments</td></tr>
+        <tr><td class="id">RD-18</td><td class="step">Lane panel</td><td class="touch">LANE-01, LANE-02</td>
+          <td class="st set">set</td><td class="when">Six payments shown crossing without a dashed cartoon track.</td></tr>
+        <tr><td class="id">RD-19</td><td class="step">The payment</td><td class="touch">LANE-06</td>
+          <td class="st set">set</td><td class="when">An object whose outside carries the code and whose inside is unreadable.</td></tr>
+        <tr><td class="id">RD-20</td><td class="step">The pile</td><td class="touch">LANE-07</td>
+          <td class="st set">set</td><td class="when">Grouping is visible as count, not as colour alone.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 4 &mdash; the shortlist</td></tr>
+        <tr><td class="id">RD-21</td><td class="step">List panel and title</td><td class="touch">LIST-01, LIST-02</td>
+          <td class="st set">set</td><td class="when">Titled with a number, not a noun: "four accounts fit".</td></tr>
+        <tr><td class="id">RD-22</td><td class="step">Candidate row</td><td class="touch">LIST-03</td>
+          <td class="st set">set</td><td class="when">One row reads as a name, with its verdict attached.</td></tr>
+        <tr><td class="id">RD-23</td><td class="step">Your row</td><td class="touch">LIST-04</td>
+          <td class="st set">set</td><td class="when">Distinguishable without relying on colour alone.</td></tr>
+        <tr><td class="id">RD-24</td><td class="step">Overflow and empty</td><td class="touch">LIST-05, LIST-06</td>
+          <td class="st set">set</td><td class="when">Neither state can render as a blank panel.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 5 &mdash; the block</td></tr>
+        <tr><td class="id">RD-25</td><td class="step">Outline and tag</td><td class="touch">BLOCK-03, BLOCK-04</td>
+          <td class="st set">set</td><td class="when">The box narrows visibly as the crowd empties.</td></tr>
+        <tr><td class="id">RD-26</td><td class="step">Dots</td><td class="touch">BLOCK-05, BLOCK-06</td>
+          <td class="st set">set</td><td class="when">128 readable at once; yours identifiable at a glance.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 6 &mdash; the dial</td></tr>
+        <tr><td class="id">RD-27</td><td class="step">Dial form</td><td class="touch">DIAL-01, DIAL-02, DIAL-03, DIAL-07</td>
+          <td class="st set">set</td><td class="when">Nine stops, keyboard-operable, no drag-only affordance. Built 2026-10-23 as legacy + k 7&ndash;14 on a native range input; set after the user saw it run.</td></tr>
+        <tr><td class="id">RD-28</td><td class="step">Stops and numbers</td><td class="touch">DIAL-04, DIAL-05, DIAL-08</td>
+          <td class="st set">set</td><td class="when">Each stop says what it costs and what it buys.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 7 &mdash; the numbers</td></tr>
+        <tr><td class="id">RD-29</td><td class="step">The four readings</td><td class="touch">READ-01 to READ-04</td>
+          <td class="st set">set</td><td class="when">Each reads as a sentence with a figure inside it.</td></tr>
+        <tr><td class="id">RD-30</td><td class="step">Legend</td><td class="touch">READ-05</td>
+          <td class="st set">set</td><td class="when">Colour is never the only carrier of meaning.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 8 &mdash; the text</td></tr>
+        <tr><td class="id">RD-31</td><td class="step">Beat card</td><td class="touch">BEAT-0n.a to .d</td>
+          <td class="st set">set</td><td class="when">One card template, six variations, no alignment drift. Built 2026-10-23: one <code>.card</code> rule, nothing positioned per card, so the six cannot drift.</td></tr>
+        <tr><td class="id">RD-32</td><td class="step">The six texts</td><td class="touch">BEAT-01 to BEAT-06</td>
+          <td class="st set">set</td><td class="when">Read in sequence, they argue. Read alone, each stands. Written 2026-10-23: premise, one label, the dial, the directory, the block, the face that never moved.</td></tr>
+        <tr><td class="id">RD-33</td><td class="step">Footnotes</td><td class="touch">NOTE-01 to NOTE-05</td>
+          <td class="st set">set</td><td class="when">The disclaimer sits there, and the numbers are sourced. Built 2026-10-23: real / stand-in / the spread, then the nine-row measured table with &mdash; where a width was never run.</td></tr>
+
+        <tr class="phase"><td colspan="5">Phase 9 &mdash; assembly</td></tr>
+        <tr><td class="id">RD-34</td><td class="step">Assemble</td><td class="touch">all</td>
+          <td class="st set">set</td><td class="when">Replaces the preview page. Same numbers, new surface. Assembled 2026-10-23: <code>shell.html</code> carries Phases 0&ndash;8 in one page; <code>preview.html</code> kept for the record.</td></tr>
+        <tr><td class="id">RD-35</td><td class="step">Review pass</td><td class="touch">all</td>
+          <td class="st set">set</td><td class="when">Checked at three widths, keyboard-only, and with the dial at both ends. Done 2026-10-23 by <code>capture/record.mjs</code> (headless Chromium): widths 360 / 768 / 1280 / 1600 carry no horizontal overflow; tab order is replay &rarr; three stops &rarr; dial with a visible ring on each; arrows, Home and End drive the dial; Enter and Space select the stops; Enter restarts the film. Two defects found and fixed: sections hidden with <code>opacity</code> were still keyboard-focusable (now <code>visibility:hidden</code>), and only the replay button had a designed focus ring (now the stops and dial too). The user&rsquo;s own live watch the same day caught two more the script could not: an impossible counter line (<code>send 7/6</code>, now counted of twelve so it matches the table rows) and a resting sentence left contradicting the table above it (now covers both halves). Scripted passes catch structure; readers catch sense.</td></tr>
+
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <div class="kicker" style="margin-bottom:.75rem">to reject a step</div>
+    Say the ID and what is wrong with it. <b>RD-13 is wrong, the drawings should be photographic</b> is
+    enough. Nothing downstream runs until that step is rewritten, so a rejection costs one step, not
+    the plan.
+  </footer>
+
+</div>
+</body>
+</html>
