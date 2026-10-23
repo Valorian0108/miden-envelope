@@ -2,7 +2,7 @@
 
 Client-side metadata minimisation for Miden private notes.
 
-Public repository: <https://github.com/Valorian0108/miden-envelope>
+Repository: <https://github.com/Valorian0108/miden-envelope>
 
 A Miden private note is sealed on the inside and labelled on the outside. The label is the
 **tag** — a 32-bit number deciding which mailbox the note is filed under — and the standard
