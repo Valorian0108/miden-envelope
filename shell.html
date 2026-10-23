@@ -45,9 +45,28 @@
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{margin:0; background:var(--paper); color:var(--ink);
-       font-family:var(--sans); font-size:var(--size-body); line-height:var(--lead-body);
-       padding:clamp(2.5rem,6vw,5rem) var(--inset) 4rem}
+       font-family:var(--sans); font-size:var(--size-body); line-height:var(--lead-body)}
   .wrap{max-width:var(--container); margin:0 auto}
+
+  /* ---- The film on one screen. Everything that moves during a take lives in
+     one viewport-height section; the essay (six cards, footnotes) begins the
+     moment you scroll past it. ---- */
+  .film{min-height:100vh; min-height:100svh; display:flex; align-items:center;
+        padding:clamp(.8rem,3vh,2.5rem) var(--inset) clamp(.5rem,1.5vh,1.25rem)}
+  .film-inner{width:100%; max-width:var(--container); margin:0 auto}
+  .film-head{border-bottom:1px solid var(--ink); padding-bottom:clamp(.6rem,1.4vh,1.1rem)}
+  .film-head .kicker{margin:0 0 .45rem}
+  .film-head h1{font-size:clamp(1.4rem,2.2vw,1.9rem); margin:0 0 .3rem; max-width:none}
+  .film-head .deck{font-size:clamp(.85rem,1.25vw,1.05rem); line-height:1.5;
+                   margin:0; max-width:95ch}
+  .film .stage-foot{margin:0; min-height:1.8rem}
+  .film .caption{font-size:.9rem}
+  .film .replay{font-size:.75rem; padding:.4em .8em}
+  .scroll-cue{font-family:var(--mono); font-size:.75rem; letter-spacing:var(--track-label);
+              text-transform:uppercase; color:var(--faint); text-align:center; margin:.2rem 0 0;
+              transition:opacity .6s ease}
+  body.playing .scroll-cue{opacity:0}
+  .essay{padding:clamp(3rem,8vh,6rem) var(--inset) 4rem}
 
   .kicker{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
           text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
@@ -227,7 +246,7 @@
   .cand .verdict{color:var(--faint); letter-spacing:var(--track-label); text-transform:uppercase;
                  font-size:.6875rem; text-align:right}
   .cand.you .who{font-weight:500}
-  .cand.you .who::before{content:"\\25B8"; margin-right:.5em}
+  .cand.you .who::before{content:"\25B8"; margin-right:.5em}
   .cand.you .verdict{color:var(--ink)}
   .list-note{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.6}
 
@@ -353,15 +372,112 @@
                             .lists{grid-template-columns:1fr; gap:2rem}
                             .measured{font-size:.6875rem}
                             .measured th,.measured td,.measured tbody th{padding-right:.35rem} }
+
+  /* ---- Wide screens: the whole film inside one viewport-height section.
+     Rows: the three people / the caption / the counter / the four evidence
+     panels. Hidden panels keep their layout boxes (visibility, not display),
+     so every reveal lands without moving anything else on screen. Vertical
+     sizes clamp against vh; two lower tiers trade static sentences for room,
+     so the take never needs a scroll. ---- */
+  @media (min-width:66rem){
+    .film-inner{display:flex; flex-direction:column; gap:clamp(.5rem,1.5vh,1.2rem)}
+    .film-body{display:grid; grid-template-columns:repeat(12,minmax(0,1fr));
+               gap:clamp(.55rem,1.5vh,1.3rem) clamp(.9rem,1.5vw,1.6rem)}
+    .film-body>.frames{grid-column:1/-1; margin:0; gap:clamp(.7rem,1.2vw,1.15rem)}
+    .film-body>.stage-foot{grid-column:1/-1}
+    .film-body>.counter{grid-column:1/-1; min-width:0}
+    .film-body>.shortlist,.film-body>.block,
+    .film-body>.dial,.film-body>.readings{grid-column:span 3; min-width:0}
+
+    .film .frame{min-height:0;
+                 padding:clamp(.55rem,1.2vh,.95rem) clamp(.65rem,1vw,1.05rem) clamp(.65rem,1.4vh,1.05rem)}
+    .film .frame .slot{font-size:.6875rem; padding-bottom:.4rem; margin-bottom:.5rem}
+    .film .name{font-size:1.1rem; margin:0 0 .45rem}
+    .film .face{height:clamp(4.75rem,11.5vh,8rem); margin:0 0 .55rem}
+    .film .role{font-size:.78rem; line-height:1.45; margin:0 0 .4rem}
+    .film .speech{font-size:.78rem; line-height:1.45; margin:0 0 .5rem; padding-left:.65rem}
+    .film .chip{font-size:.6875rem}
+    .film .watch{font-size:.6875rem; margin-top:.5rem}
+
+    .film .lane-head{font-size:.72rem; line-height:1.4; margin:0 0 .45rem}
+    .film .code-groups{display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+                       gap:0 clamp(.9rem,1.5vw,1.6rem); margin:0}
+    .film .code-group{padding:.5rem 0 .55rem; border-bottom:1px solid var(--rule)}
+    .film .group-head{font-size:.8rem; margin:0 0 .4rem -.4em; padding:.15em .4em}
+    .film .acct{font-size:.6875rem; margin:-.3rem 0 .2rem -.1rem}
+    .film .acct-list{font-size:.66rem; gap:.15rem .6rem; margin:0 0 .4rem}
+    .film .lane{gap:.5rem}
+    .film .pay .tag{font-size:.625rem; padding:.28rem .35rem; letter-spacing:.03em; gap:.4em}
+    .film .pay .inside{height:clamp(1.5rem,2.8vh,2.4rem); font-size:.6rem; line-height:1.35; padding:.4rem}
+
+    .film .shortlist,.film .block,.film .dial,.film .readings{
+      border-top:1px solid var(--ink); padding:.7rem 0 0; margin:0}
+    .film .lists{gap:.8rem; margin-top:.55rem}
+    .film .list-title{font-size:.95rem; margin:0 0 .45rem}
+    .film .cand{padding:.3rem 0; font-size:.625rem; gap:.4rem}
+    .film .cand .who{letter-spacing:0}
+    .film .cand .verdict{font-size:.5625rem; letter-spacing:.05em}
+    .film .list-note{font-size:.6875rem; line-height:1.45; margin:.45rem 0 0}
+    .film .block-head{margin:.45rem 0 .5rem; gap:.6rem}
+    .film .stop{font-size:.625rem; padding:.28em .45em}
+    .film .block-read{font-size:.625rem}
+    .film .grid{gap:.3rem}
+    .film .dot{aspect-ratio:auto; height:clamp(7px,1.15vh,12px)}
+    .film .dial{max-width:none}
+    .film .dial-label{font-size:.6875rem; margin:.45rem 0 .3rem}
+    .film .dial-scale{font-size:.6rem; margin:.2rem 0 .45rem}
+    .film .dial-read{font-size:.8rem; line-height:1.4; margin:0 0 .2rem}
+    .film .dial-read b{font-size:1.1rem}
+    .film .dial-cost{font-size:.66rem; line-height:1.4}
+    .film .reads{margin:.5rem 0 .35rem}
+    .film .read{padding:.4rem .45rem .45rem 0}
+    .film .r-label{font-size:.5625rem; line-height:1.3; margin:0 0 .2rem}
+    .film .r-value{font-size:1.1rem; margin:0 0 .2rem}
+    .film .r-value .u{font-size:.66rem}
+    .film .r-note{font-size:.58rem; line-height:1.3}
+    .film .legend{font-size:.66rem; line-height:1.5}
+  }
+
+  /* Short screens, tier one: the two static sentences in each frame and the
+     small panel notes yield to the moving parts. They stay in the DOM and
+     return on taller screens; the six cards below carry the full words. */
+  @media (min-width:66rem) and (max-height:66rem){
+    .film .role,.film .speech{display:none}
+    .film .list-note,.film .legend{display:none}
+    .film .face{height:clamp(4.25rem,10vh,6.5rem)}
+    .film .shortlist,.film .block,.film .dial,.film .readings{padding-top:.6rem}
+    .film .list-title{font-size:.875rem}
+    .film .cand{padding:.26rem 0}
+  }
+
+  /* Short screens, tier two: the person-slot line yields too. */
+  @media (min-width:66rem) and (max-height:52rem){
+    .film .frame .slot{display:none}
+    .film .name{font-size:1rem}
+    .film{padding-top:clamp(.6rem,2vh,2.5rem); padding-bottom:clamp(.4rem,1vh,1.25rem)}
+    .film-head{padding-bottom:.5rem}
+    .film-head .kicker{margin-bottom:.3rem}
+    .film-head h1{font-size:clamp(1.35rem,2.2vw,1.75rem)}
+    .film-head .deck{font-size:.8rem; line-height:1.45}
+    .film .face{height:clamp(4rem,9vh,6rem)}
+    .film .dot{height:clamp(6px,1vh,10px)}
+    .film .replay{padding:.3em .7em}
+    .scroll-cue{margin:0}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<section class="film">
+<div class="film-inner">
 
-  <p class="kicker">The sorting counter &middot; one pass</p>
-  <h1>Sorting counter</h1>
-  <p class="deck">One surface. Six parcels, three people, one look each. Every beat shows exactly how
-  much the person looking can tell.</p>
+  <header class="film-head">
+    <p class="kicker">The sorting counter &middot; one pass</p>
+    <h1>Sorting counter</h1>
+    <p class="deck">One surface. Six parcels, three people, one look each. Every beat shows exactly how
+    much the person looking can tell.</p>
+  </header>
+
+  <div class="film-body">
 
   <div class="frames">
 
@@ -436,6 +552,7 @@
     <button class="replay" type="button" hidden>Play again</button>
   </div>
 
+  <div class="counter">
   <p class="lane-head">Sorting counter &middot; parcels</p>
 
   <div class="code-groups">
@@ -480,6 +597,7 @@
       </div>
     </section>
 
+  </div>
   </div>
 
   <section class="shortlist">
@@ -558,6 +676,16 @@
     under each is the arithmetic any crowd of 128 would give. Labels and position carry the meaning;
     colour never does.</p>
   </section>
+
+  </div><!-- /film-body -->
+
+  <p class="scroll-cue">The film ends here &middot; scroll on for the argument, in six cards &darr;</p>
+
+</div><!-- /film-inner -->
+</section><!-- /film -->
+
+<main class="essay">
+<div class="wrap">
 
   <section class="argument">
     <p class="lane-head">The argument &middot; six cards, in order</p>
@@ -728,6 +856,7 @@
   </footer>
 
 </div>
+</main>
 <script>
 /* The film. One clock, absolute offsets, state classes only.
    No reduced-motion branch: motion is the point here. */
@@ -910,7 +1039,10 @@
   run.className = 'run';
   grid.appendChild(run);
 
+  var current = '0x8E18';
+
   function select(code){
+    current = code;
     dots.forEach(function(d){
       d.classList.toggle('on', d.dataset.code === code);
     });
@@ -935,6 +1067,10 @@
     b.addEventListener('click', function(){ select(b.dataset.code); });
   });
   select('0x8E18');
+
+  /* Keep the bracket on its dots when the layout shifts under it: window
+     resizes, and the responsive breakpoints that come with them. */
+  window.addEventListener('resize', function(){ select(current); });
 })();
 </script>
 <script>

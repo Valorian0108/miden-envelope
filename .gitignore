@@ -8,3 +8,6 @@ dist/
 # os and editor droppings
 Thumbs.db
 .DS_Store
+
+# fit-check output: regenerated on every run of capture/fit-check.mjs
+capture/fit-*.png
