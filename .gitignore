@@ -11,3 +11,7 @@ Thumbs.db
 
 # fit-check output: regenerated on every run of capture/fit-check.mjs
 capture/fit-*.png
+
+# recorder intermediates: temporary videos playwright drops while making
+# film-1440.webm / demo-1440.webm. Regenerable, hash-named, never referenced.
+capture/page@*.webm
