@@ -4,81 +4,131 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>miden-envelope, running</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* RD-01 — every value is a token. Same :root as shell.html: the demo wears
+     the film's clothes. No hex anywhere else. */
   :root{
-    --paper:#F2F5F9; --raised:#FAFCFE; --ink:#101419; --rule:#BABEC3;
-    --dim:#5A6068; --faint:#8A9098; --oxblood:#90302E; --pumpkin:#FF7518; --brass:#71ADD0;
-    --display:"Space Grotesk",system-ui,sans-serif;
-    --sans:"IBM Plex Sans",system-ui,sans-serif;
-    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --paper:   oklch(97% 0.006 250);
+    --raised:  oklch(99% 0.004 250);
+    --ink:     oklch(19% 0.012 255);
+    --rule:    oklch(80% 0.008 250);
+    --pumpkin: oklch(71.6% 0.191 47);
+    --brass:   oklch(72% 0.08 235);
+    --oxblood: oklch(45% 0.13 25);
+    --dim:     oklch(42% 0.01 255);
+    --faint:   oklch(58% 0.008 255);
+
+    --inset: clamp(1.25rem, 5.8vw, 6.5rem);
+    --measure: 68ch;
+
+    --size-body: 1.0625rem;
+    --size-small: 0.875rem;
+    --size-micro: 0.8125rem;
+    --track-label: 0.11em;
+    --track-display: -0.035em;
+    --lead-body: 1.65;
+
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --sans: "IBM Plex Sans", system-ui, sans-serif;
+    --display: "Space Grotesk", sans-serif;
   }
+
   *{box-sizing:border-box}
   body{margin:0; background:var(--paper); color:var(--ink);
-       font-family:var(--sans); font-size:15px; line-height:1.55;
-       padding:2.5rem clamp(1.25rem,5vw,4rem) 5rem}
+       font-family:var(--sans); font-size:var(--size-body); line-height:var(--lead-body);
+       padding:clamp(2.5rem,6vw,5rem) var(--inset) 4rem}
   .wrap{max-width:62rem; margin:0 auto}
-  h1{font-family:var(--display); font-weight:500; font-size:2rem; letter-spacing:-.02em; margin:0 0 .4rem}
-  .kicker{font-family:var(--mono); font-size:.6875rem; letter-spacing:.14em; text-transform:uppercase;
-          color:var(--dim); margin:0 0 2rem}
-  .honesty{border-left:2px solid var(--oxblood); padding:.15rem 0 .15rem 1rem; margin:0 0 2.5rem;
-           color:var(--dim); font-size:.875rem; line-height:1.6}
-  .honesty b{color:var(--ink)}
 
-  .beat{border-top:1px solid var(--ink); padding:1.4rem 0 0; margin:0 0 2.6rem;
+  /* head — the film's pattern: kicker over the title, pumpkin display face */
+  .kicker{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+          text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+          margin:0 0 1rem}
+  .kicker::before{content:""; width:.5em; height:.5em; background:var(--pumpkin); flex:0 0 auto}
+  h1{font-family:var(--display); font-weight:500; letter-spacing:var(--track-display);
+     font-size:clamp(1.9rem,3.6vw,2.7rem); line-height:.98; margin:0 0 1.8rem;
+     color:var(--pumpkin)}
+
+  .honesty{border-left:2px solid var(--oxblood); padding:.15rem 0 .15rem 1rem; margin:0 0 3rem;
+           color:var(--dim); font-size:var(--size-small); line-height:1.7; max-width:var(--measure)}
+  .honesty b{color:var(--ink); font-weight:500}
+  .honesty code{font-family:var(--mono); font-size:.95em}
+
+  /* beats — ink rules; dim lane-heads with the ink square, as in the film */
+  .beat{border-top:1px solid var(--ink); padding:1.5rem 0 0; margin:0 0 3rem;
         transition:opacity .7s ease}
   .beat.hidden{opacity:0}
-  .lane-head{font-family:var(--mono); font-size:.6875rem; letter-spacing:.14em; text-transform:uppercase;
-             color:var(--ink); margin:0 0 .9rem; display:flex; align-items:center; gap:.5em}
+  .lane-head{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+             text-transform:uppercase; color:var(--dim); display:flex; align-items:center; gap:.55em;
+             margin:0 0 1rem}
   .lane-head::before{content:""; width:.5em; height:.5em; background:var(--ink); flex:0 0 auto}
-  .say{font-size:1.0625rem; line-height:1.6; margin:0 0 1.2rem; min-height:3.2em}
-  .say b{font-weight:600}
+  .say{font-size:var(--size-body); line-height:var(--lead-body); margin:0 0 1.2rem;
+       min-height:3.2em; max-width:var(--measure)}
+  .say b{font-weight:500; color:var(--ink)}
 
-  table{border-collapse:collapse; width:100%; font-size:.8125rem}
+  /* tables — the film's measured-table padding, tracking, and rules */
+  table{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:var(--size-micro)}
   /* auto layout stretched these to the full measure and left holes between columns;
      cap them near the width their content actually needs */
   #sends{max-width:44rem}
   #fetch{max-width:56rem}
   #sends th:nth-child(1){width:2.2rem}
-  th{font-family:var(--mono); font-size:.6875rem; letter-spacing:.1em; text-transform:uppercase;
-     color:var(--dim); text-align:left; font-weight:400; padding:.4rem .8rem .4rem 0;
-     border-bottom:1px solid var(--rule)}
-  td{padding:.42rem .8rem .42rem 0; border-bottom:1px solid color-mix(in srgb, var(--rule) 45%, transparent);
-     font-family:var(--mono); font-size:.78rem}
+  th{font-family:var(--mono); font-size:.6875rem; letter-spacing:var(--track-label);
+     text-transform:uppercase; color:var(--dim); font-weight:400; text-align:left;
+     padding:.5rem .9rem .55rem 0; border-bottom:1px solid var(--rule); vertical-align:bottom}
+  td{padding:.45rem .9rem .45rem 0; font-variant-numeric:tabular-nums; font-weight:400;
+     border-bottom:1px solid color-mix(in srgb, var(--rule) 45%, transparent)}
   tr{transition:opacity .45s ease}
   tr.hidden{opacity:0}
   td.sent{color:var(--dim)}
 
-  .reads{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid var(--rule);
-         background:var(--raised)}
-  .read{padding:1rem 1.2rem; border-right:1px solid var(--rule); transition:opacity .6s ease}
+  /* observer reads — the film's unboxed strip: rules above and below,
+     rule between cells, no frame, no fill */
+  .reads{display:grid; grid-template-columns:repeat(3,1fr); gap:0;
+         border-top:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+  .read{padding:1.15rem 1.25rem 1.25rem; border-right:1px solid var(--rule); transition:opacity .6s ease}
   .read.hidden{opacity:0}
-  .read:last-child{border-right:0}
-  .read .l{font-family:var(--mono); font-size:.6875rem; letter-spacing:.12em; text-transform:uppercase;
-           color:var(--dim); margin:0 0 .5rem}
-  .read .v{font-family:var(--display); font-size:1.9rem; line-height:1; letter-spacing:-.03em; margin:0 0 .45rem;
-           font-variant-numeric:tabular-nums}
-  .read .v small{font-size:.9rem; color:var(--dim)}
-  .read .n{font-size:.8125rem; color:var(--dim); margin:0; line-height:1.5}
+  .read:first-child{padding-left:0}
+  .read:last-child{border-right:0; padding-right:0}
+  .read .l{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+           text-transform:uppercase; color:var(--dim); margin:0 0 .6rem}
+  .read .v{font-family:var(--display); font-size:2.1rem; line-height:1; color:var(--ink);
+           margin:0 0 .55rem; font-variant-numeric:tabular-nums; letter-spacing:-.03em}
+  .read .v small{font-size:1rem; color:var(--dim); margin-left:.06em}
+  .read .n{font-size:var(--size-small); color:var(--dim); margin:0; line-height:1.55}
 
+  /* controls — the film's button: ink border, transparent, inverts on hover/focus */
   .controls{display:flex; gap:1rem; align-items:center; flex-wrap:wrap}
-  select,button{font-family:var(--mono); font-size:.8125rem; background:var(--raised); color:var(--ink);
-                border:1px solid var(--rule); padding:.55em .9em; cursor:pointer}
+  .controls label{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+                  text-transform:uppercase; color:var(--dim)}
+  select,button{font-family:var(--mono); font-size:var(--size-micro); letter-spacing:var(--track-label);
+                text-transform:uppercase; background:none; border:1px solid var(--ink); color:var(--ink);
+                padding:.55em .95em; cursor:pointer; transition:background .2s, color .2s}
+  button:hover:not(:disabled),button:focus-visible{background:var(--ink); color:var(--paper)}
+  select:hover:not(:disabled){background:var(--raised)}
   select:disabled,button:disabled{opacity:.4; cursor:default}
-  button:hover:not(:disabled),select:hover:not(:disabled){border-color:var(--ink)}
-  .empty{color:var(--faint); font-size:.8125rem; font-family:var(--mono); line-height:1.6}
+  select:focus-visible,button:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
+  .empty{color:var(--faint); font-size:var(--size-micro); font-family:var(--mono); line-height:1.6}
 
   pre#log{background:var(--raised); border:1px solid var(--rule); padding:1rem 1.2rem; margin:0;
           font-family:var(--mono); font-size:.75rem; line-height:1.7; color:var(--dim);
           max-height:20rem; overflow:auto; white-space:pre-wrap}
   pre#log b{color:var(--ink); font-weight:500}
-  @media (max-width:760px){ .reads{grid-template-columns:1fr} .read{border-right:0; border-bottom:1px solid var(--rule)} }
+
+  @media (max-width:760px){
+    .reads{grid-template-columns:1fr}
+    .read{border-right:0; border-bottom:1px solid var(--rule); padding:1rem 0}
+    .read:last-child{border-bottom:0; padding-bottom:1.25rem}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>miden-envelope, running</h1>
   <p class="kicker">the library, not a picture of it</p>
+  <h1>miden-envelope, running</h1>
 
   <p class="honesty"><b>The chain below is simulated.</b> The SDK has no Windows binary, so Vite is
   running in mock mode and <code>@miden-sdk/miden-sdk</code> is aliased to an in-memory stand-in.
